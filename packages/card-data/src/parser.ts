@@ -69,18 +69,26 @@ function classifyType(raw: string): RawCard["type"] {
   return "character";
 }
 
-/** Derive a trigger type from the trigger text's leading bracketed tag, if present. */
-function classifyTrigger(triggerText: string): RawCard["triggerType"] {
-  if (!triggerText.trim()) return "none";
-  const t = triggerText.toLowerCase();
-  // Official text often leads with a bracketed label like [Special]/[Color]/[Final]/[Draw]/[Get]/[Active].
-  if (/\bspecial\b/.test(t)) return "special";
-  if (/\bcolor\b/.test(t)) return "color";
-  if (/\bfinal\b/.test(t)) return "final";
-  if (/\bdraw\b/.test(t)) return "draw";
-  if (/\bget\b/.test(t)) return "get";
-  if (/\bactive\b/.test(t)) return "active";
-  // Has trigger text but unrecognized tag: still a trigger, type unknown -> treat as special-ish unknown.
+/**
+ * Read the trigger type from the official trigger icon, which is authoritative.
+ * The detail page renders e.g. <img src=".../trigger/ico_active_trigger.png" alt="Active">.
+ * No icon = no trigger.
+ */
+function classifyTriggerFromIcon(triggerDd: HTMLElement | null): RawCard["triggerType"] {
+  if (!triggerDd) return "none";
+  const img = triggerDd.querySelector("img");
+  if (!img) return "none";
+  const src = (img.getAttribute("src") ?? "").toLowerCase();
+  const alt = (img.getAttribute("alt") ?? "").toLowerCase();
+  const probe = `${src} ${alt}`;
+  if (/\bspecial\b/.test(probe)) return "special";
+  if (/\bcolor\b/.test(probe)) return "color";
+  if (/\bfinal\b/.test(probe)) return "final";
+  if (/\bdraw\b/.test(probe)) return "draw";
+  if (/\bget\b/.test(probe)) return "get";
+  if (/\bactive\b/.test(probe)) return "active";
+  // Icon present but unrecognized: it's a trigger of unknown type. Surface as special by
+  // default but this should be revisited if it ever fires.
   return "special";
 }
 
@@ -107,7 +115,9 @@ export function parseDetail(html: string, ctx: ParseDetailContext): RawCard {
   const typeText = ddText(root, "categoryData");
   const affinityText = ddText(root, "attributeData");
   const effectText = stripLabel(ddText(root, "effectData"), "Effect");
+  const triggerDd = root.querySelector(".triggerData .cardDataContents");
   const triggerText = stripLabel(ddText(root, "triggerData"), "Trigger");
+  const triggerType = classifyTriggerFromIcon(triggerDd);
 
   const requiredEnergy = parseEnergyIcons(
     root.querySelector(".needEnergyData .cardDataContents"),
@@ -146,15 +156,16 @@ export function parseDetail(html: string, ctx: ParseDetailContext): RawCard {
     affinities,
     effectText,
     triggerText,
-    triggerType: classifyTrigger(triggerText),
+    triggerType,
     imageUrl,
     source: "unionarena-tcg.com",
     scrapedAt: new Date().toISOString(),
   };
 }
 
-/** Remove a leading label word ("Effect"/"Trigger") the text node sometimes includes. */
+/** Remove a leading label word ("Effect"/"Trigger") and normalize the "-" placeholder. */
 function stripLabel(text: string, label: string): string {
   const re = new RegExp(`^${label}\\s*`, "i");
-  return text.replace(re, "").trim();
+  const out = text.replace(re, "").trim();
+  return out === "-" ? "" : out;
 }

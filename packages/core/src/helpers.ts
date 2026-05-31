@@ -1,5 +1,6 @@
 // Pure state helpers for the engine. No intent logic here.
 import type {
+  ApplyResult,
   CardDef,
   CardInstance,
   Color,
@@ -7,6 +8,14 @@ import type {
   PlayerState,
   Seat,
 } from "./types.js";
+
+/** Shared result constructors. */
+export function err(error: string): ApplyResult {
+  return { ok: false, error };
+}
+export function ok(state: GameState): ApplyResult {
+  return { ok: true, state };
+}
 
 export function opponentOf(seat: Seat): Seat {
   return seat === "p1" ? "p2" : "p1";
@@ -18,6 +27,13 @@ export function getDef(state: GameState, iid: string): CardDef {
   const def = state.defs[inst.defId];
   if (!def) throw new Error(`No def ${inst.defId}`);
   return def;
+}
+
+/** BP including temporary modifiers (e.g. active-trigger +3000). */
+export function effectiveBp(state: GameState, iid: string): number {
+  const def = getDef(state, iid);
+  const inst = getInst(state, iid);
+  return (def.bp ?? 0) + (inst.bpModifier ?? 0);
 }
 
 export function getInst(state: GameState, iid: string): CardInstance {

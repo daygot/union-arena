@@ -11,24 +11,22 @@ import type {
 import { apForTurn } from "./rules.js";
 import {
   activeApCount,
+  effectiveBp,
+  err,
   getDef,
   getInst,
   hasRequiredEnergy,
+  ok,
   opponentOf,
   payAp,
   removeFrom,
   withInstance,
   withPlayer,
 } from "./helpers.js";
+import { resolveTriggerEffect } from "./triggers.js";
 
 const PHASE_ORDER: Phase[] = ["start", "movement", "main", "attack", "end"];
 
-function err(error: string): ApplyResult {
-  return { ok: false, error };
-}
-function ok(state: GameState): ApplyResult {
-  return { ok: true, state };
-}
 function log(state: GameState, ...events: GameEvent[]): GameState {
   return { ...state, log: [...state.log, ...events] };
 }
@@ -53,7 +51,7 @@ export function applyIntent(state: GameState, intent: Intent): ApplyResult {
     case "declareBlock":
       return handleDeclareBlock(state, intent.seat, intent.blockerIid);
     case "resolveTrigger":
-      return handleResolveTrigger(state, intent.seat, intent.iid, intent.activate);
+      return handleResolveTrigger(state, intent);
     case "advancePhase":
       return handleAdvancePhase(state, intent.seat);
     case "endTurn":
@@ -323,8 +321,8 @@ function handleDeclareBlock(state: GameState, seat: Seat, blockerIid?: string): 
 
 /** Battle between attacker and a defending character. */
 function resolveBattle(state: GameState, attackerIid: string, defenderIid: string): ApplyResult {
-  const aBp = getDef(state, attackerIid).bp ?? 0;
-  const dBp = getDef(state, defenderIid).bp ?? 0;
+  const aBp = effectiveBp(state, attackerIid);
+  const dBp = effectiveBp(state, defenderIid);
   const aDef = getDef(state, attackerIid);
   let s: GameState = { ...state };
   s = { ...s, pendingAttack: undefined };
@@ -393,26 +391,38 @@ function resolveDirectDamage(state: GameState, attackerIid: string): ApplyResult
 
 function handleResolveTrigger(
   state: GameState,
-  seat: Seat,
-  iid: string,
-  _activate: boolean,
+  intent: Extract<Intent, { type: "resolveTrigger" }>,
 ): ApplyResult {
+  const { seat, iid, activate, targetIid, playIid } = intent;
   const pt = state.pendingTriggers;
   if (!pt) return err("No triggers to resolve.");
   if (seat !== pt.seat) return err("Only the damaged player resolves their triggers.");
   if (!pt.iids.includes(iid)) return err("That card is not awaiting trigger resolution.");
 
-  // Effect of trigger is a placeholder for now; move card to sideline.
-  let s = withPlayer(state, pt.seat, (p) => ({ ...p, sideline: [...p.sideline, iid] }));
-  s = log(s, { kind: "trigger", seat: pt.seat, iid, activated: _activate });
+  // The revealed card's CardDef carries its (fixed) trigger type.
+  const def = getDef(state, iid);
+  const triggerType = def.hasTrigger && def.triggerType ? def.triggerType : "none";
+
+  // Resolve via the hard-coded trigger registry. This disposes the source card
+  // (to sideline, or to hand for `get`).
+  const res = resolveTriggerEffect(state, triggerType, {
+    seat,
+    iid,
+    activate,
+    ...(targetIid ? { targetIid } : {}),
+    ...(playIid ? { playIid } : {}),
+  });
+  if (!res.ok) return res;
+  let s = log(res.state, { kind: "trigger", seat, iid, activated: activate });
+
   const remaining = pt.iids.filter((x) => x !== iid);
   if (remaining.length > 0) {
-    s = { ...s, pendingTriggers: { seat: pt.seat, iids: remaining } };
+    s = { ...s, pendingTriggers: { seat, iids: remaining } };
     return ok(s);
   }
   s = { ...s, pendingTriggers: undefined };
   // After all triggers resolved, check life-out.
-  s = checkLifeWin(s, pt.seat, opponentOf(pt.seat));
+  s = checkLifeWin(s, seat, opponentOf(seat));
   return ok(s);
 }
 
@@ -457,6 +467,12 @@ function runEndPhase(state: GameState): GameState {
   for (const iid of [...s.players[seat].frontLine, ...s.players[seat].energyLine]) {
     if (getInst(s, iid).orientation === "resting") {
       s = withInstance(s, iid, (i) => ({ ...i, orientation: "active" }));
+    }
+  }
+  // Clear "until end of turn" BP modifiers on all characters (both players).
+  for (const iid of Object.keys(s.instances)) {
+    if (s.instances[iid]!.bpModifier) {
+      s = withInstance(s, iid, (i) => ({ ...i, bpModifier: 0 }));
     }
   }
   // Hand size limit 8: extras to removal (oldest kept arbitrarily = keep first 8).

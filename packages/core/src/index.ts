@@ -6,6 +6,8 @@ export { apForTurn } from "./rules.js";
 export { validateDeck } from "./deck.js";
 export type { DeckValidationResult } from "./deck.js";
 export { applyIntent, beginFirstTurn } from "./engine.js";
+export { resolveTriggerEffect } from "./triggers.js";
+export type { TriggerInput } from "./triggers.js";
 export {
   energyPool,
   hasRequiredEnergy,

@@ -111,6 +111,34 @@ Page images in `docs/rules-raw/pages/`. This file is the distilled, engine-facin
     treats plain Impact as pierce and Impact N as the damage amount. Trust this model.)
 - **Damage (●)** — extra trigger-check / additional damage variants (see page 15-16).
 - **Trigger** — ability usable when revealed from Life Area on damage (optional). Trigger types capped at 4/deck.
+
+## Trigger Types (HARD-CODED, fixed by rules — user-confirmed 2026-05-31)
+
+When a life card is revealed on damage, its Trigger (if any) is one of these fixed types.
+Resolution is deterministic per type. The revealed card is the "trigger source"; the
+"trigger player" is the player being attacked (the one who revealed it).
+
+1. **get** — the revealed card is added to the trigger player's hand (instead of going to sideline).
+2. **draw** — the trigger player draws 1 card from their deck.
+3. **active** — the trigger player chooses one of their characters, switches it to **active**,
+   and it gains **+3000 BP** (until end of turn).
+4. **color** — effect depends on the **color of the revealed card**:
+   - **Red:** sideline one opponent front-line character with **BP ≤ 2500**.
+   - **Blue:** return (bounce) one opponent front-line character with **BP ≤ 3500** to its owner's hand.
+   - **Green:** play one character with **AP cost ≤ 2** from the trigger player's **hand** onto the
+     field, **active**.
+   - **Purple:** play one character with **AP cost ≤ 2** from the trigger player's **sideline** onto
+     the **front line**, **active**.
+   - (Yellow has no listed color trigger here — treat as no-op unless a card says otherwise.)
+5. **special** — sideline one character on the opponent's front line (any BP).
+6. **final** — if this is the trigger player's **last** life card, they may put the **top card of
+   their deck** into their life area (i.e. they don't lose; life is replenished by 1).
+
+Notes:
+- get / draw / active are uncapped in deckbuilding; special / color / final are capped at 4 each.
+- All triggers are **optional** to activate (player may decline). After resolution the revealed
+  card goes to the **sideline**, EXCEPT **get** (goes to hand) and **final** (the top-of-deck card
+  goes to life; the revealed card itself still goes to sideline).
 - **Once Per Turn** — per-copy-on-field once/turn; re-played copy counts as new.
 - **Phrase substitution** — `{A} ... {B} instead` conditional text swaps.
 

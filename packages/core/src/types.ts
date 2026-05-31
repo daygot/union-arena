@@ -87,6 +87,8 @@ export interface CardInstance {
   raidUnder: string[];
   /** Whether this life/face-down card has been revealed. */
   faceUp: boolean;
+  /** Temporary BP delta (e.g. +3000 from an active trigger), cleared at end of turn. */
+  bpModifier?: number;
 }
 
 export type ZoneId =
@@ -161,7 +163,16 @@ export type Intent =
   | { type: "activateAbility"; seat: Seat; iid: string; effectId: string }
   | { type: "declareAttack"; seat: Seat; attackerIid: string; targetIid?: string }
   | { type: "declareBlock"; seat: Seat; blockerIid?: string }
-  | { type: "resolveTrigger"; seat: Seat; iid: string; activate: boolean }
+  | {
+      type: "resolveTrigger";
+      seat: Seat;
+      iid: string;
+      activate: boolean;
+      /** Target character for triggers that pick one (active/special/color). */
+      targetIid?: string;
+      /** Card to play for green/purple color triggers (from hand/sideline). */
+      playIid?: string;
+    }
   | { type: "advancePhase"; seat: Seat }
   | { type: "endTurn"; seat: Seat };
 

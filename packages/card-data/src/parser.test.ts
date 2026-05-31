@@ -51,7 +51,8 @@ describe("parseDetail", () => {
   it("captures effect and trigger text", () => {
     expect(raw.effectText.toLowerCase()).toContain("3000 bp");
     expect(raw.triggerText.toLowerCase()).toContain("switch it to active");
-    expect(raw.triggerType).not.toBe("none");
+    // Trigger type comes from the official icon (alt="Active"), not text guessing.
+    expect(raw.triggerType).toBe("active");
   });
 
   it("builds an absolute image url", () => {
