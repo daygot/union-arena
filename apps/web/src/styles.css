@@ -82,7 +82,9 @@ body {
 .dot.red { background: var(--red); } .dot.blue { background: var(--blue); }
 .dot.green { background: var(--green); } .dot.purple { background: var(--purple); }
 .dot.yellow { background: var(--yellow); }
-.trig { font-size: 10px; color: var(--accent); margin-top: 4px; text-transform: capitalize; }
+.badges { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+.trig { font-size: 10px; color: var(--accent); text-transform: capitalize; }
+.abil { font-size: 11px; color: var(--good); }
 
 .midline { display: flex; justify-content: center; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 6px; }

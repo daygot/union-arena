@@ -1,6 +1,12 @@
 import { useState } from "react";
 import type { CardDef, CardInstance, GameState, Seat } from "@union-arena/core";
+import { EFFECTS } from "@union-arena/core";
 import { useGame } from "./useGame.js";
+
+/** Activatable (manual) ability ids on a card, for UI buttons. */
+function activatableEffects(def: CardDef): string[] {
+  return def.effectIds.filter((id) => EFFECTS[id]?.when === "activate");
+}
 
 const ROOM = new URLSearchParams(location.search).get("room") ?? "demo";
 
@@ -81,6 +87,18 @@ export function App() {
                   Attack with selected
                 </button>
               )}
+              {selected &&
+                (state.players[me].frontLine.includes(selected) ||
+                  state.players[me].energyLine.includes(selected)) &&
+                activatableEffects(def(selected)).map((eid) => (
+                  <button
+                    key={eid}
+                    title={EFFECTS[eid]?.text}
+                    onClick={() => act(() => send({ type: "activateAbility", seat: me, iid: selected, effectId: eid }))}
+                  >
+                    Activate: {eid}
+                  </button>
+                ))}
             </div>
           )}
         </div>
@@ -189,7 +207,10 @@ function Card(props: {
         {def.bp != null && <span className="bp">BP {def.bp + (inst.bpModifier ?? 0)}</span>}
         <span className={`dot ${def.color}`} />
       </div>
-      {def.hasTrigger && <div className="trig">⟡ {def.triggerType}</div>}
+      <div className="badges">
+        {def.hasTrigger && <span className="trig">⟡ {def.triggerType}</span>}
+        {def.effectIds.length > 0 && <span className="abil" title={def.text}>✦</span>}
+      </div>
     </button>
   );
 }
