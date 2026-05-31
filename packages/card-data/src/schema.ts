@@ -22,6 +22,7 @@ export const TriggerTypeSchema = z.enum([
   "get",
   "draw",
   "active",
+  "raid",
 ]);
 
 export const RawCardSchema = z.object({

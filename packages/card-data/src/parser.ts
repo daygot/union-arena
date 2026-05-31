@@ -87,6 +87,7 @@ function classifyTriggerFromIcon(triggerDd: HTMLElement | null): RawCard["trigge
   if (/\bdraw\b/.test(probe)) return "draw";
   if (/\bget\b/.test(probe)) return "get";
   if (/\bactive\b/.test(probe)) return "active";
+  if (/\braid\b/.test(probe)) return "raid";
   // Icon present but unrecognized: it's a trigger of unknown type. Surface as special by
   // default but this should be revisited if it ever fires.
   return "special";

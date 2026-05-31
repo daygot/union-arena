@@ -11,6 +11,7 @@
 import {
   getDef,
   getInst,
+  hasRequiredEnergy,
   opponentOf,
   withInstance,
   withPlayer,
@@ -63,6 +64,8 @@ export function resolveTriggerEffect(
       return resolveSpecial(state, input);
     case "final":
       return resolveFinal(state, seat, iid);
+    case "raid":
+      return resolveRaid(state, input);
     case "color":
       return resolveColor(state, input);
     default:
@@ -132,6 +135,57 @@ function resolveFinal(state: GameState, seat: Seat, iid: string): ApplyResult {
       s = withInstance(s, top!, (i) => ({ ...i, faceUp: false }));
     }
   }
+  return ok(s);
+}
+
+// 7. raid — EITHER perform Raid with the revealed card onto one of your field characters
+//    (if you meet its energy requirement), OR just add the card to hand.
+//    With `activate` + a `targetIid` (the base char) we attempt the Raid; otherwise add to hand.
+function resolveRaid(state: GameState, input: TriggerInput): ApplyResult {
+  const { seat, iid, targetIid } = input;
+  // No raid target chosen -> add the revealed card to hand.
+  if (!targetIid) {
+    const s = withPlayer(state, seat, (p) => ({ ...p, hand: [...p.hand, iid] }));
+    return ok(withInstance(s, iid, (i) => ({ ...i, faceUp: false })));
+  }
+  // Validate the base character: must be your own field character without an existing Raid.
+  const base = state.instances[targetIid];
+  const player = state.players[seat];
+  const onField =
+    player.frontLine.includes(targetIid) || player.energyLine.includes(targetIid);
+  if (!base || base.controller !== seat || !onField) {
+    return err("raid trigger must target your own field character.");
+  }
+  if (base.raidUnder.length > 0) {
+    return err("raid trigger cannot raid onto a character that is already a Raid stack.");
+  }
+  // Energy requirement for the revealed (Raid) card.
+  const raidDef = getDef(state, iid);
+  if (!hasRequiredEnergy(state, seat, raidDef)) {
+    return err("not enough energy to Raid this card.");
+  }
+  // Determine where the raid stack sits (inherit the base's line).
+  const onFront = player.frontLine.includes(targetIid);
+  // Perform Raid: revealed card becomes the top of a stack over the base.
+  // It inherits the base's orientation; underlying abilities go inactive (modeled by raidUnder).
+  let s = withInstance(state, iid, (i) => ({
+    ...i,
+    owner: seat,
+    controller: seat,
+    orientation: base.orientation,
+    raidUnder: [targetIid, ...base.raidUnder],
+    faceUp: true,
+  }));
+  // Replace the base iid in its line with the new top (the Raid card).
+  s = withPlayer(s, seat, (p) => ({
+    ...p,
+    frontLine: onFront
+      ? p.frontLine.map((x) => (x === targetIid ? iid : x))
+      : p.frontLine,
+    energyLine: onFront
+      ? p.energyLine
+      : p.energyLine.map((x) => (x === targetIid ? iid : x)),
+  }));
   return ok(s);
 }
 

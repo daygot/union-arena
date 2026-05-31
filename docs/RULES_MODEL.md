@@ -133,6 +133,15 @@ Resolution is deterministic per type. The revealed card is the "trigger source";
 5. **special** — sideline one character on the opponent's front line (any BP).
 6. **final** — if this is the trigger player's **last** life card, they may put the **top card of
    their deck** into their life area (i.e. they don't lose; life is replenished by 1).
+7. **raid** — the trigger player may **EITHER** perform **Raid** with the revealed card onto one
+   of their own field characters (if they meet the revealed card's energy requirement), **OR**
+   simply add the revealed card to hand.
+
+Confirmed edge cases (user 2026-05-31):
+- **final disposition:** the revealed final card goes to the **sideline**; the top-of-deck card
+  goes to life → net life unchanged on that hit.
+- **no legal target:** a trigger that needs a target/play with none available **fizzles silently**
+  (no effect), since all triggers are optional anyway.
 
 Notes:
 - get / draw / active are uncapped in deckbuilding; special / color / final are capped at 4 each.

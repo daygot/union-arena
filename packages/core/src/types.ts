@@ -25,7 +25,14 @@ export type Keyword =
  * Trigger types. Only special/color/final are subject to the 4-per-type deck cap;
  * get/draw/active are uncapped.
  */
-export type TriggerType = "special" | "color" | "final" | "get" | "draw" | "active";
+export type TriggerType =
+  | "special"
+  | "color"
+  | "final"
+  | "get"
+  | "draw"
+  | "active"
+  | "raid";
 
 /** Trigger types that are limited to 4 copies per deck. */
 export const CAPPED_TRIGGER_TYPES: readonly TriggerType[] = ["special", "color", "final"];

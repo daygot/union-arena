@@ -37,6 +37,16 @@ const DEFS: Record<string, CardDef> = {
   BLUE: def({ id: "BLUE", color: "blue", hasTrigger: true, triggerType: "color" }),
   GREEN: def({ id: "GREEN", color: "green", hasTrigger: true, triggerType: "color" }),
   PURPLE: def({ id: "PURPLE", color: "purple", hasTrigger: true, triggerType: "color" }),
+  // raid source needs 1 red energy
+  RAIDER: def({
+    id: "RAIDER",
+    color: "red",
+    requiredEnergy: [{ color: "red", amount: 1 }],
+    hasTrigger: true,
+    triggerType: "raid",
+  }),
+  // energy generator (sits on energy line, gives 1 red)
+  GEN: def({ id: "GEN", energyGeneration: [{ color: "red", amount: 1 }] }),
 };
 
 let mint = 0;
@@ -251,6 +261,56 @@ describe("final trigger", () => {
       expect(r.state.players.p1.life.length).toBe(1); // unchanged
       expect(r.state.players.p1.deck.length).toBe(deckBefore);
     }
+  });
+});
+
+describe("raid trigger", () => {
+  it("with a valid target and enough energy, raids onto the base character", () => {
+    const g = bare();
+    const gen = inst(g, "p1", "GEN");
+    g.players.p1.energyLine = [gen];
+    const base = inst(g, "p1", "BP1000");
+    g.players.p1.frontLine = [base];
+    const src = inst(g, "p1", "RAIDER");
+    const r = resolveTriggerEffect(g, "raid" as TriggerType, {
+      seat: "p1",
+      iid: src,
+      activate: true,
+      targetIid: base,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      // Raid card is now the top of the stack in the base's slot.
+      expect(r.state.players.p1.frontLine).toContain(src);
+      expect(r.state.players.p1.frontLine).not.toContain(base);
+      expect(r.state.instances[src]!.raidUnder).toContain(base);
+    }
+  });
+
+  it("with no target, adds the revealed card to hand instead", () => {
+    const g = bare();
+    const src = inst(g, "p1", "RAIDER");
+    const before = g.players.p1.hand.length;
+    const r = resolveTriggerEffect(g, "raid" as TriggerType, { seat: "p1", iid: src, activate: true });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.state.players.p1.hand).toContain(src);
+      expect(r.state.players.p1.hand.length).toBe(before + 1);
+    }
+  });
+
+  it("rejects raid when energy requirement is not met", () => {
+    const g = bare();
+    const base = inst(g, "p1", "BP1000"); // no energy generator on energy line
+    g.players.p1.frontLine = [base];
+    const src = inst(g, "p1", "RAIDER");
+    const r = resolveTriggerEffect(g, "raid" as TriggerType, {
+      seat: "p1",
+      iid: src,
+      activate: true,
+      targetIid: base,
+    });
+    expect(r.ok).toBe(false);
   });
 });
 
