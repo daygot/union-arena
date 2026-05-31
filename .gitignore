@@ -8,3 +8,6 @@ dist/
 # Scraped card data is large/IP-sensitive — keep out of git for now.
 # (cache = raw HTML, sets = generated JSON datasets, images = card art)
 packages/card-data/data/
+
+# web build output
+apps/web/dist/
