@@ -6,5 +6,5 @@ dist/
 .env.local
 
 # Scraped card data is large/IP-sensitive — keep out of git for now.
-packages/card-data/data/raw/
-packages/card-data/data/images/
+# (cache = raw HTML, sets = generated JSON datasets, images = card art)
+packages/card-data/data/
