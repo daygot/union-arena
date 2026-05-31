@@ -11,6 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, "..", "data");
 const CACHE_DIR = join(DATA_DIR, "cache");
 const OUT_DIR = join(DATA_DIR, "sets");
+const IMAGES_DIR = join(DATA_DIR, "images");
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -25,11 +26,14 @@ async function main(): Promise<void> {
   }
   const limitStr = arg("--limit");
   const limit = limitStr ? Number(limitStr) : undefined;
+  const withImages = process.argv.includes("--images");
+  const imagesDir = withImages ? IMAGES_DIR : undefined;
 
-  console.error(`Scraping "${title}"${limit ? ` (limit ${limit})` : ""}...`);
+  console.error(`Scraping "${title}"${limit ? ` (limit ${limit})` : ""}${withImages ? " +images" : ""}...`);
   const cards = await scrapeTitle(title, {
     cacheDir: CACHE_DIR,
     limit,
+    ...(imagesDir ? { imagesDir } : {}),
     onProgress: (done, total, name) => {
       process.stderr.write(`\r  [${done}/${total}] ${name.padEnd(40).slice(0, 40)}`);
     },
@@ -49,6 +53,10 @@ async function main(): Promise<void> {
   const outPath = join(OUT_DIR, `${setCode}.json`);
   await writeFile(outPath, JSON.stringify(dataset, null, 2), "utf-8");
   console.error(`Wrote ${cards.length} cards -> ${outPath}`);
+  if (withImages) {
+    const dl = cards.filter((c) => c.localImage).length;
+    console.error(`Images: ${dl}/${cards.length} available under ${IMAGES_DIR}`);
+  }
 }
 
 main().catch((e) => {

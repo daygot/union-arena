@@ -1,7 +1,13 @@
 // Orchestrates scraping a whole title: list page -> per-card detail pages -> RawCard[].
+import { join } from "node:path";
 import { Fetcher } from "./fetcher.js";
 import { parseCardListIndex, parseDetail } from "./parser.js";
 import { RawCardSchema, type RawCard } from "./schema.js";
+
+/** Filesystem-safe filename for a card's image, e.g. UE19BT_SMD-1-001.png. */
+function imageFileName(cardNumber: string, setCode: string): string {
+  return `${setCode}_${cardNumber}.png`;
+}
 
 const BASE = "https://www.unionarena-tcg.com";
 const LIST_URL = `${BASE}/na/cardlist/index.php?search=true`;
@@ -12,6 +18,8 @@ export interface ScrapeOptions {
   throttleMs?: number;
   /** Optional cap for testing (scrape only the first N cards). */
   limit?: number;
+  /** If set, download each card image into this directory (filename = <cardNo>.png). */
+  imagesDir?: string;
   onProgress?: (done: number, total: number, name: string) => void;
 }
 
@@ -34,6 +42,20 @@ export async function scrapeTitle(title: string, opts: ScrapeOptions): Promise<R
       raw.imageUrl = new URL(entry.imagePath, BASE).toString();
     }
     const parsed = RawCardSchema.parse(raw);
+
+    // Optionally download the card image and rewrite imageUrl to the local path.
+    if (opts.imagesDir && parsed.imageUrl) {
+      const file = imageFileName(parsed.cardNumber, parsed.setCode);
+      const dest = join(opts.imagesDir, file);
+      try {
+        await fetcher.download(parsed.imageUrl, dest);
+        parsed.localImage = file;
+      } catch (e) {
+        // Non-fatal: keep the remote URL if the image fails.
+        opts.onProgress?.(done, entries.length, `image failed: ${parsed.cardNumber}`);
+      }
+    }
+
     cards.push(parsed);
     done++;
     opts.onProgress?.(done, entries.length, parsed.name);

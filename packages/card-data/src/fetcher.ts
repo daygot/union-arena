@@ -2,7 +2,7 @@
 // re-runs don't re-hit the server. Throttles requests to be a good citizen.
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
@@ -49,6 +49,28 @@ export class Fetcher {
   async postForm(url: string, form: Record<string, string>): Promise<string> {
     const body = new URLSearchParams(form).toString();
     return this.request("POST", url, body);
+  }
+
+  /**
+   * Download a binary asset (e.g. a card image) to `destPath`. Skips the network
+   * if the file already exists. Throttled like other requests.
+   */
+  async download(url: string, destPath: string): Promise<boolean> {
+    try {
+      await stat(destPath);
+      return false; // already present; no download
+    } catch {
+      // not present -> fetch
+    }
+    await mkdir(dirname(destPath), { recursive: true });
+    const wait = (this.opts.throttleMs ?? 800) - (Date.now() - this.lastRequest);
+    if (wait > 0) await this.sleep(wait);
+    this.lastRequest = Date.now();
+    const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "image/*" } });
+    if (!res.ok) throw new Error(`GET ${url} -> HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    await writeFile(destPath, buf);
+    return true;
   }
 
   private async request(method: string, url: string, body?: string): Promise<string> {

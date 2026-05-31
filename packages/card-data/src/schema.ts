@@ -50,6 +50,8 @@ export const RawCardSchema = z.object({
   triggerText: z.string().default(""),
   triggerType: TriggerTypeSchema.default("none"),
   imageUrl: z.string().default(""),
+  /** Local image filename relative to the set's images dir (set when downloaded). */
+  localImage: z.string().optional(),
   /** Provenance + cache freshness. */
   source: z.string().default("unionarena-tcg.com"),
   scrapedAt: z.string().default(""),
