@@ -8,6 +8,8 @@ export type { DeckValidationResult } from "./deck.js";
 export { applyIntent, beginFirstTurn } from "./engine.js";
 export { resolveTriggerEffect } from "./triggers.js";
 export type { TriggerInput } from "./triggers.js";
+export { EFFECTS, effectsFor, runEffects, runEffect } from "./effects.js";
+export type { EffectDef, EffectTrigger, EffectContext } from "./effects.js";
 export {
   energyPool,
   hasRequiredEnergy,

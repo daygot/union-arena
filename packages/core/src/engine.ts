@@ -24,6 +24,7 @@ import {
   withPlayer,
 } from "./helpers.js";
 import { resolveTriggerEffect } from "./triggers.js";
+import { runEffects, runEffect, effectsFor } from "./effects.js";
 
 const PHASE_ORDER: Phase[] = ["start", "movement", "main", "attack", "end"];
 
@@ -43,7 +44,7 @@ export function applyIntent(state: GameState, intent: Intent): ApplyResult {
     case "move":
       return handleMove(state, intent.seat, intent.iid, intent.to);
     case "playCard":
-      return handlePlayCard(state, intent.seat, intent.iid, intent.to);
+      return handlePlayCard(state, intent.seat, intent.iid, intent.to, intent.targetIid);
     case "useEvent":
       return handleUseEvent(state, intent.seat, intent.iid);
     case "declareAttack":
@@ -56,8 +57,9 @@ export function applyIntent(state: GameState, intent: Intent): ApplyResult {
       return handleAdvancePhase(state, intent.seat);
     case "endTurn":
       return handleAdvancePhase(state, intent.seat); // endTurn == advance from end phase
-    case "raid":
     case "activateAbility":
+      return handleActivateAbility(state, intent.seat, intent.iid, intent.effectId);
+    case "raid":
       return err(`Intent "${intent.type}" not yet implemented.`);
     default:
       return err(`Unknown intent.`);
@@ -211,6 +213,7 @@ function handlePlayCard(
   seat: Seat,
   iid: string,
   to?: "frontLine" | "energyLine",
+  targetIid?: string,
 ): ApplyResult {
   if (seat !== state.activeSeat) return err("Not your turn.");
   if (state.phase !== "main") return err("Can only play cards during main phase.");
@@ -240,7 +243,36 @@ function handlePlayCard(
     hand: removeFrom(pl.hand, iid),
     [dest]: [...pl[dest], iid],
   }));
-  return ok(log(s, { kind: "play", seat, iid, to: dest }));
+  s = log(s, { kind: "play", seat, iid, to: dest });
+  // Fire any on-play abilities now that the card is on the field.
+  const fx = runEffects(s, iid, "onPlay", { ...(targetIid !== undefined ? { targetIid } : {}) });
+  if (!fx.ok) return fx;
+  return ok(fx.state);
+}
+
+function handleActivateAbility(
+  state: GameState,
+  seat: Seat,
+  iid: string,
+  effectId: string,
+): ApplyResult {
+  if (seat !== state.activeSeat) return err("Not your turn.");
+  const inst = getInst(state, iid);
+  if (inst.controller !== seat) return err("You don't control that card.");
+  const p = state.players[seat];
+  if (!p.frontLine.includes(iid) && !p.energyLine.includes(iid))
+    return err("Card must be on your field to activate.");
+  const def = getDef(state, iid);
+  if (!def.effectIds.includes(effectId))
+    return err("That card has no such ability.");
+  // Only `activate`-typed effects can be triggered this way.
+  const available = effectsFor(state, iid, "activate");
+  if (!available.some((e) => e.id === effectId))
+    return err("That ability is not manually activatable.");
+  // (Activation AP cost not modeled yet; scraped data has no separate cost.)
+  const fx = runEffect(state, iid, effectId, {});
+  if (!fx.ok) return fx;
+  return ok(log(fx.state, { kind: "info", message: `${def.name}: ${effectId} activated.` }));
 }
 
 function handleUseEvent(state: GameState, seat: Seat, iid: string): ApplyResult {
@@ -290,7 +322,11 @@ function handleDeclareAttack(
   // Switch attacker to resting.
   let s = withInstance(state, attackerIid, (i) => ({ ...i, orientation: "resting" }));
   s = { ...s, pendingAttack: { attackerIid, ...(targetIid !== undefined ? { targetIid } : {}) } };
-  return ok(log(s, { kind: "attack", seat, attackerIid, ...(targetIid !== undefined ? { targetIid } : {}) }));
+  s = log(s, { kind: "attack", seat, attackerIid, ...(targetIid !== undefined ? { targetIid } : {}) });
+  // Fire any on-attack abilities.
+  const fx = runEffects(s, attackerIid, "onAttack", {});
+  if (!fx.ok) return fx;
+  return ok(fx.state);
 }
 
 function handleDeclareBlock(state: GameState, seat: Seat, blockerIid?: string): ApplyResult {
@@ -312,7 +348,10 @@ function handleDeclareBlock(state: GameState, seat: Seat, blockerIid?: string): 
     if (binst.orientation !== "active") return err("Blocker must be active.");
     let s = withInstance(state, blockerIid, (i) => ({ ...i, orientation: "resting" }));
     s = log(s, { kind: "block", seat: defender, blockerIid });
-    return resolveBattle(s, pa.attackerIid, blockerIid);
+    // Fire on-block abilities (e.g. conditional BP gain) while pendingAttack is set.
+    const fx = runEffects(s, blockerIid, "onBlock", {});
+    if (!fx.ok) return fx;
+    return resolveBattle(fx.state, pa.attackerIid, blockerIid);
   }
 
   // No block -> direct damage to defender (player).

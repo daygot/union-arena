@@ -164,7 +164,7 @@ export type Intent =
   | { type: "mulligan"; seat: Seat; keep: boolean }
   | { type: "extraDraw"; seat: Seat }
   | { type: "move"; seat: Seat; iid: string; to: "frontLine" | "energyLine" }
-  | { type: "playCard"; seat: Seat; iid: string; to?: "frontLine" | "energyLine" }
+  | { type: "playCard"; seat: Seat; iid: string; to?: "frontLine" | "energyLine"; targetIid?: string }
   | { type: "raid"; seat: Seat; iid: string; targetIid: string }
   | { type: "useEvent"; seat: Seat; iid: string }
   | { type: "activateAbility"; seat: Seat; iid: string; effectId: string }

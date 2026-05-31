@@ -19,6 +19,38 @@ function detectKeywords(text: string): Keyword[] {
   return found;
 }
 
+/**
+ * Infer engine effect ids from official card text. These must match ids in the
+ * core effect registry (packages/core/src/effects.ts). Patterns are deliberately
+ * specific; unmatched text just yields no effect id (falls back to display text).
+ */
+const EFFECT_PATTERNS: { id: string; re: RegExp }[] = [
+  // "Choose up to one other character on your field. It gains 3000 BP until ... turn."
+  {
+    id: "buff_other_3000_eot",
+    re: /choose up to one other character on your field[^.]*\.\s*it gains 3000 bp until the end of the turn/i,
+  },
+  // "This character gains 3000 BP until the end of the turn."
+  {
+    id: "buff_self_3000_eot",
+    re: /this character gains 3000 bp until the end of the turn/i,
+  },
+  // "... if your opponent's attacking character has 3000 or less base BP, this character gains 2000 BP ..."
+  {
+    id: "block_guard_2000",
+    re: /3000 or less base bp[^.]*gains 2000 bp/i,
+  },
+];
+
+/** Detect known effect ids from the card's combined text. */
+function detectEffectIds(text: string): string[] {
+  const ids: string[] = [];
+  for (const { id, re } of EFFECT_PATTERNS) {
+    if (re.test(text) && !ids.includes(id)) ids.push(id);
+  }
+  return ids;
+}
+
 /** Detect "Impact N" -> N (pierce + N damage). Plain Impact -> 1. */
 function detectImpactN(text: string): number | undefined {
   if (!/\bimpact\b/i.test(text)) return undefined;
@@ -30,6 +62,7 @@ export function toCardDef(raw: RawCard): CardDef {
   const allText = `${raw.effectText}\n${raw.triggerText}`;
   const keywords = detectKeywords(allText);
   const impactN = detectImpactN(allText);
+  const effectIds = detectEffectIds(allText);
   const hasTrigger = raw.triggerType !== "none" && raw.triggerText.trim().length > 0;
 
   // RawCard.type may be "ap"; engine CardType is character|site|event. Map ap -> site-like support.
@@ -55,7 +88,7 @@ export function toCardDef(raw: RawCard): CardDef {
     keywords,
     hasTrigger,
     ...(triggerType ? { triggerType } : {}),
-    effectIds: [], // resolved later by the effect registry
+    effectIds, // inferred from card text; resolved by the core effect registry
     text: [raw.effectText, raw.triggerText].filter(Boolean).join("\n").trim(),
     ...(raw.imageUrl ? { imageUrl: raw.imageUrl } : {}),
   };
