@@ -5,3 +5,12 @@ export type { DeckList, CreateGameOptions } from "./setup.js";
 export { apForTurn } from "./rules.js";
 export { validateDeck } from "./deck.js";
 export type { DeckValidationResult } from "./deck.js";
+export { applyIntent, beginFirstTurn } from "./engine.js";
+export {
+  energyPool,
+  hasRequiredEnergy,
+  activeApCount,
+  opponentOf,
+  getDef,
+  getInst,
+} from "./helpers.js";

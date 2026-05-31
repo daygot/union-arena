@@ -128,8 +128,26 @@ export interface GameState {
   defs: Record<string, CardDef>;
   /** Set when the game is over. */
   winner?: Seat;
+  reason?: "life" | "deckout";
+  /** Transient combat state: an attack has been declared and is awaiting a block decision. */
+  pendingAttack?: PendingAttack;
+  /** Transient: life cards revealed by damage that still need trigger resolution. */
+  pendingTriggers?: PendingTriggers;
   /** Append-only public log of resolved events (UI + replays read this). */
   log: GameEvent[];
+}
+
+export interface PendingAttack {
+  attackerIid: string;
+  /** When set, a Snipe attack on an opponent character; otherwise a direct player attack. */
+  targetIid?: string;
+}
+
+export interface PendingTriggers {
+  /** Seat whose life is being checked (the damaged player). */
+  seat: Seat;
+  /** Revealed life-card iids still awaiting resolve, in order. */
+  iids: string[];
 }
 
 /** Player-issued intents. The authoritative engine validates and applies these. */
