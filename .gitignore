@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.local
+
+# Scraped card data is large/IP-sensitive — keep out of git for now.
+packages/card-data/data/raw/
+packages/card-data/data/images/
