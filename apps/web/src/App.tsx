@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
-import type { CardDef, CardInstance, GameState, Seat } from "@union-arena/core";
-import { EFFECTS } from "@union-arena/core";
+import type { CardDef, CardInstance, Color, GameState, Seat } from "@union-arena/core";
+import { EFFECTS, playerTurnNumber } from "@union-arena/core";
 import { useGoldfishGame } from "./staticDemo.js";
 import { useGame } from "./useGame.js";
 
@@ -46,14 +46,21 @@ function activeApCount(state: GameState, seat: Seat): number {
 }
 
 function hasRequiredEnergy(state: GameState, seat: Seat, card: CardDef): boolean {
-  const pool = new Map<string, number>();
+  const pool = energyPool(state, seat);
+  return card.requiredEnergy.every((energy) => pool[energy.color] >= energy.amount);
+}
+
+const COLORS: Color[] = ["red", "blue", "green", "yellow", "purple"];
+
+function energyPool(state: GameState, seat: Seat): Record<Color, number> {
+  const pool: Record<Color, number> = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
   for (const iid of state.players[seat].energyLine) {
     const def = state.defs[state.instances[iid]!.defId]!;
     for (const energy of def.energyGeneration) {
-      pool.set(energy.color, (pool.get(energy.color) ?? 0) + energy.amount);
+      pool[energy.color] += energy.amount;
     }
   }
-  return card.requiredEnergy.every((energy) => (pool.get(energy.color) ?? 0) >= energy.amount);
+  return pool;
 }
 
 function canPayForCard(state: GameState, seat: Seat, card: CardDef): boolean {
@@ -292,6 +299,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           <span>Room <b>{roomId}</b></span>
           <span>You are <b className={`seat ${seat}`}>{seat}</b></span>
           <span>Turn <b>{state.turn}</b></span>
+          <span>{state.activeSeat} turn <b>{playerTurnNumber(state.activeSeat, state.turn)}</b></span>
           <span>Phase <b className="phase">{state.phase}</b></span>
           <span className={myTurn ? "turn-on" : "turn-off"}>
             {state.winner
@@ -500,6 +508,7 @@ function PlayerSide(props: {
 }) {
   const { label, who, state, def, viewer, canSelect, selected, onSelect, onPreview, flip } = props;
   const p = state.players[who];
+  const energy = energyPool(state, who);
   const zones = (
     <>
       <Zone name={`Front Line (${p.frontLine.length}/4)`} kind="front">
@@ -509,7 +518,7 @@ function PlayerSide(props: {
             selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
         ))}
       </Zone>
-      <Zone name={`Energy Line (${p.energyLine.length}/4)`} kind="energy">
+      <Zone name={`Energy Line (${p.energyLine.length}/4) · ${energySummary(energy)}`} kind="energy">
         {p.energyLine.map((iid) => (
           <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
             variant="field"
@@ -523,13 +532,14 @@ function PlayerSide(props: {
     <section className={`side ${who}`}>
       <div className="side-head">
         <h2>{label} <span className="tag">{who}</span></h2>
-      <div className="counts">
+        <div className="counts">
           <span>✋ {p.hand.length}</span>
           <span>❤️ {p.life.length}</span>
           <span>🂠 {p.deck.length}</span>
           <span>⛔ {p.removal.length}</span>
           <span>🪦 {p.sideline.length}</span>
         </div>
+        <EnergyStrip pool={energy} />
       </div>
       <ApStrip state={state} who={who} />
       {flip ? <>{zones}</> : <>{zones}</>}
@@ -593,6 +603,25 @@ function ApStrip(props: { state: GameState; who: Seat }) {
           return <span key={iid} className={`ap-pip ${ready ? "ready" : "spent"}`}>{index + 1}</span>;
         })}
       </div>
+    </div>
+  );
+}
+
+function energySummary(pool: Record<Color, number>): string {
+  const parts = COLORS.filter((color) => pool[color] > 0).map((color) => `${pool[color]} ${color}`);
+  return parts.length > 0 ? parts.join(", ") : "0 energy";
+}
+
+function EnergyStrip(props: { pool: Record<Color, number> }) {
+  return (
+    <div className="energy-strip" aria-label={`Energy generation ${energySummary(props.pool)}`}>
+      <span className="energy-label">Energy</span>
+      {COLORS.map((color) => (
+        <span key={color} className={`energy-chip ${color}`}>
+          <span className={`dot ${color}`} />
+          <b>{props.pool[color]}</b>
+        </span>
+      ))}
     </div>
   );
 }

@@ -335,6 +335,26 @@ describe("phase advancement & turn pass", () => {
     expect(g.players.p2.deck.length).toBe(p2DeckBefore - 1);
   });
 
+  it("endTurn skips directly to the opponent start phase", () => {
+    let g = fixture({ phase: "main", turn: 1, activeSeat: "p1" });
+    g = must(applyIntent(g, { type: "endTurn", seat: "p1" }));
+    expect(g.activeSeat).toBe("p2");
+    expect(g.phase).toBe("start");
+    expect(g.turn).toBe(2);
+  });
+
+  it("uses personal turn count for AP progression", () => {
+    let g = fixture({ phase: "end", turn: 1, activeSeat: "p1" });
+    g = must(applyIntent(g, { type: "endTurn", seat: "p1" })); // p2 personal turn 1
+    expect(g.players.p2.ap.filter((iid) => g.instances[iid]!.orientation === "active").length).toBe(2);
+    g = must(applyIntent(g, { type: "endTurn", seat: "p2" })); // p1 personal turn 2
+    expect(g.players.p1.ap.filter((iid) => g.instances[iid]!.orientation === "active").length).toBe(2);
+    g = must(applyIntent(g, { type: "endTurn", seat: "p1" })); // p2 personal turn 2
+    expect(g.players.p2.ap.filter((iid) => g.instances[iid]!.orientation === "active").length).toBe(2);
+    g = must(applyIntent(g, { type: "endTurn", seat: "p2" })); // p1 personal turn 3
+    expect(g.players.p1.ap.filter((iid) => g.instances[iid]!.orientation === "active").length).toBe(3);
+  });
+
   it("end phase discards down to 8 cards", () => {
     let g = fixture({ phase: "end", turn: 2, activeSeat: "p1" });
     // stuff 10 cards into hand

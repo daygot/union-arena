@@ -167,6 +167,40 @@ body {
   border-radius: 999px;
   background: rgba(0,0,0,.18);
 }
+.energy-strip {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 7px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  background: rgba(0,0,0,.22);
+}
+.energy-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+.energy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 28px;
+  height: 22px;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.energy-chip b { font-size: 12px; }
+.energy-chip.red { background: rgba(255,93,93,.12); }
+.energy-chip.blue { background: rgba(74,168,255,.12); }
+.energy-chip.green { background: rgba(74,222,128,.12); }
+.energy-chip.yellow { background: rgba(255,216,74,.12); }
+.energy-chip.purple { background: rgba(176,123,255,.12); }
 
 .ap-strip {
   grid-area: ap;

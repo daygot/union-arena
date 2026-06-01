@@ -8,7 +8,7 @@ import type {
   Phase,
   Seat,
 } from "./types.js";
-import { apForTurn } from "./rules.js";
+import { apForTurn, playerTurnNumber } from "./rules.js";
 import {
   activeApCount,
   effectiveBp,
@@ -59,7 +59,7 @@ export function applyIntent(state: GameState, intent: Intent): ApplyResult {
     case "advancePhase":
       return handleAdvancePhase(state, intent.seat);
     case "endTurn":
-      return handleAdvancePhase(state, intent.seat); // endTurn == advance from end phase
+      return handleEndTurn(state, intent.seat);
     case "activateAbility":
       return handleActivateAbility(state, intent.seat, intent.iid, intent.effectId);
     default:
@@ -126,7 +126,7 @@ function runStartPhase(state: GameState): GameState {
 
   // 3. Top up AP to the table count (set active). We model AP cards as already present (3),
   //    activating up to apForTurn of them; the rest stay unavailable this early-turn.
-  const target = apForTurn(seat, s.turn);
+  const target = apForTurn(seat, playerTurnNumber(seat, s.turn));
   let activated = 0;
   s = {
     ...s,
@@ -517,6 +517,23 @@ function handleAdvancePhase(state: GameState, seat: Seat): ApplyResult {
 
   // End phase -> pass turn to opponent and run their start phase.
   let s = runEndPhase(state);
+  const next = opponentOf(seat);
+  s = { ...s, activeSeat: next, turn: s.turn + 1, phase: "start" };
+  s = log(s, { kind: "phase", phase: "start", seat: next, turn: s.turn });
+  s = runStartPhase(s);
+  return ok(s);
+}
+
+function handleEndTurn(state: GameState, seat: Seat): ApplyResult {
+  if (seat !== state.activeSeat) return err("Not your turn.");
+  if (state.pendingAttack) return err("Resolve the current attack before ending turn.");
+  if (state.pendingTriggers) return err("Resolve pending triggers before ending turn.");
+
+  let s: GameState = state.phase === "end" ? state : { ...state, phase: "end" };
+  if (state.phase !== "end") {
+    s = log(s, { kind: "phase", phase: "end", seat, turn: s.turn });
+  }
+  s = runEndPhase(s);
   const next = opponentOf(seat);
   s = { ...s, activeSeat: next, turn: s.turn + 1, phase: "start" };
   s = log(s, { kind: "phase", phase: "start", seat: next, turn: s.turn });

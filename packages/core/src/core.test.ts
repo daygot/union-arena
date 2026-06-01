@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createGame, __resetIidCounter } from "./setup.js";
-import { apForTurn } from "./rules.js";
+import { apForTurn, playerTurnNumber } from "./rules.js";
 import { shuffle } from "./rng.js";
 import type { CardDef, Seat } from "./types.js";
 
@@ -102,5 +102,14 @@ describe("apForTurn", () => {
     expect(apForTurn("p2", 1)).toBe(2);
     expect(apForTurn("p2", 2)).toBe(2);
     expect(apForTurn("p2", 3)).toBe(3);
+  });
+
+  it("derives player turn number from the shared half-turn counter", () => {
+    expect(playerTurnNumber("p1", 1)).toBe(1);
+    expect(playerTurnNumber("p2", 2)).toBe(1);
+    expect(playerTurnNumber("p1", 3)).toBe(2);
+    expect(playerTurnNumber("p2", 4)).toBe(2);
+    expect(playerTurnNumber("p1", 5)).toBe(3);
+    expect(playerTurnNumber("p2", 6)).toBe(3);
   });
 });
