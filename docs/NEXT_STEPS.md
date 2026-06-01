@@ -4,7 +4,7 @@
 
 1. Import more real cards/sets, then expand effect-pattern coverage so those cards do useful engine work.
 2. Keep the board UI honest: every public zone should be visible and inspectable.
-3. Use the static demo as a smoke test only; it should render basic functions and behaviors, not become the product.
+3. Use goldfish mode as a smoke test only; it should render basic functions and behaviors, not become the product.
 4. Host the WebSocket server separately once the core loop is worth testing live.
 
 ## Product Priorities

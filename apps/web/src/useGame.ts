@@ -23,7 +23,7 @@ export function useGame(roomId: string, enabled = true): GameConnection {
   useEffect(() => {
     if (!enabled) return;
     if (!WS_URL) {
-      setError("No WebSocket server is configured for this hosted build. Use Static Demo or set VITE_WS_URL.");
+      setError("No WebSocket server is configured for this hosted build. Use Goldfish or set VITE_WS_URL.");
       return;
     }
 

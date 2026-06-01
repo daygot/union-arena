@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from "react";
 import type { CardDef, CardInstance, GameState, Seat } from "@union-arena/core";
 import { EFFECTS } from "@union-arena/core";
-import { useStaticDemoGame } from "./staticDemo.js";
+import { useGoldfishGame } from "./staticDemo.js";
 import { useGame } from "./useGame.js";
 
 /** Activatable (manual) ability ids on a card, for UI buttons. */
@@ -14,8 +14,9 @@ function currentRoomId(): string | null {
   return room || null;
 }
 
-function isStaticDemo(): boolean {
-  return new URLSearchParams(location.search).get("demo") === "static";
+function isGoldfishDemo(): boolean {
+  const demo = new URLSearchParams(location.search).get("demo");
+  return demo === "goldfish" || demo === "static";
 }
 
 function normalizeRoomId(raw: string): string {
@@ -60,7 +61,7 @@ function canPayForCard(state: GameState, seat: Seat, card: CardDef): boolean {
 }
 
 export function App() {
-  if (isStaticDemo()) return <GameTable roomId="static-demo" staticDemo />;
+  if (isGoldfishDemo()) return <GameTable roomId="goldfish" goldfish />;
   const roomId = currentRoomId();
   if (!roomId) return <Lobby />;
   return <GameTable roomId={roomId} />;
@@ -83,10 +84,10 @@ function Lobby() {
     location.href = roomUrl(makeRoomId());
   };
 
-  const openStaticDemo = () => {
+  const openGoldfish = () => {
     const url = new URL(location.href);
     url.search = "";
-    url.searchParams.set("demo", "static");
+    url.searchParams.set("demo", "goldfish");
     location.href = url.toString();
   };
 
@@ -101,7 +102,7 @@ function Lobby() {
         <div className="brand lobby-brand">⚔️ Union Arena</div>
         <form className="lobby-form" onSubmit={join}>
           <button type="button" onClick={host}>Host Game</button>
-          <button type="button" className="secondary" onClick={openStaticDemo}>Static Demo</button>
+          <button type="button" className="secondary" onClick={openGoldfish}>Goldfish</button>
           <div className="join-row">
             <input
               value={roomCode}
@@ -123,11 +124,11 @@ function Lobby() {
   );
 }
 
-function GameTable(props: { roomId: string; staticDemo?: boolean }) {
-  const { roomId, staticDemo = false } = props;
-  const live = useGame(roomId, !staticDemo);
-  const demo = useStaticDemoGame();
-  const { connected, seat, state, error, send } = staticDemo ? demo : live;
+function GameTable(props: { roomId: string; goldfish?: boolean }) {
+  const { roomId, goldfish = false } = props;
+  const live = useGame(roomId, !goldfish);
+  const demo = useGoldfishGame();
+  const { connected, seat, state, error, send } = goldfish ? demo : live;
   const [selected, setSelected] = useState<string | null>(null);
   const [raidSource, setRaidSource] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
@@ -297,10 +298,10 @@ function GameTable(props: { roomId: string; staticDemo?: boolean }) {
               ? `🏆 ${state.winner} wins (${state.reason})`
               : myTurn ? "● your turn" : `waiting on ${state.activeSeat}`}
           </span>
-          {staticDemo && <span className="demo-pill">static demo</span>}
+          {goldfish && <span className="demo-pill">goldfish</span>}
         </div>
         <div className="top-actions">
-          {!staticDemo && (
+          {!goldfish && (
             <>
               <button onClick={copyInvite}>{copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Copy Failed" : "Copy Invite"}</button>
               <button onClick={openSeat}>Open Second Seat</button>

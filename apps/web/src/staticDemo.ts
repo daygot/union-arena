@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   __resetIidCounter,
   applyIntent,
@@ -46,7 +46,7 @@ const DEMO_DEFS: Record<string, CardDef> = {
     cardNumber: "SMD-1-001",
     name: "Obiguro",
     bp: 500,
-    effectIds: ["buff_other_3000_eot"],
+    effectIds: ["buff_other_3000_eot_on_sideline"],
     hasTrigger: true,
     triggerType: "active",
     text: "Choose up to one other character on your field. It gains 3000 BP until the end of the turn.\nChoose one character on your field and switch it to active. It gains 3000 BP until the end of the turn.",
@@ -109,6 +109,7 @@ const DEMO_DEFS: Record<string, CardDef> = {
     cardNumber: "SMD-1-009",
     name: "Lu Wutang",
     bp: 2000,
+    effectIds: ["draw_card_on_play"],
     text: "Draw a card.",
     imageUrl: "https://www.unionarena-tcg.com/na/images/cardlist/card/UE19BT_SMD-1-009.png?v3",
   }),
@@ -139,10 +140,16 @@ function createDemoState(): GameState {
   return beginFirstTurn(state);
 }
 
-export function useStaticDemoGame(): GameConnection {
+function requiredActor(state: GameState): "p1" | "p2" {
+  if (state.pendingTriggers) return state.pendingTriggers.seat;
+  if (state.pendingAttack) return state.activeSeat === "p1" ? "p2" : "p1";
+  return state.activeSeat;
+}
+
+export function useGoldfishGame(): GameConnection {
   const [state, setState] = useState(createDemoState);
   const [error, setError] = useState<string | null>(null);
-  const seat = useMemo(() => "p1" as const, []);
+  const seat = requiredActor(state);
 
   const send = useCallback((intent: Intent) => {
     setState((current) => {

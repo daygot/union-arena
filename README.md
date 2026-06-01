@@ -25,7 +25,7 @@ For a frontend-only smoke test:
 corepack pnpm --filter @union-arena/web dev
 ```
 
-Open `http://localhost:5173/?demo=static`.
+Open `http://localhost:5173/?demo=goldfish`.
 
 ## GitHub Pages
 
@@ -33,7 +33,7 @@ GitHub Pages serves the static web build from the `gh-pages` branch.
 
 The hosted build supports:
 
-- `?demo=static` for a browser-only demo using the real core reducer and tiny sample cards.
+- `?demo=goldfish` for a browser-only single-player goldfish mode using the real core reducer and real sample cards.
 - `?room=...` for live multiplayer only after a WebSocket server is hosted and `VITE_WS_URL` is configured before building.
 
 ## Checks
