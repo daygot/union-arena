@@ -43,3 +43,16 @@ corepack pnpm -r test
 corepack pnpm --filter @union-arena/web typecheck
 corepack pnpm --filter @union-arena/web build
 ```
+
+## Card Data
+
+Generated set JSON, HTML cache, and downloaded images live under `packages/card-data/data/` and are intentionally gitignored.
+
+```bash
+corepack pnpm --filter @union-arena/card-data scrape --list-titles
+corepack pnpm --filter @union-arena/card-data scrape "HUNTER X HUNTER"
+corepack pnpm --filter @union-arena/card-data scrape "SAKAMOTO DAYS" --images
+corepack pnpm --filter @union-arena/card-data scrape --coverage
+```
+
+`apps/server` loads every `*.json` file in `packages/card-data/data/sets`, so newly scraped sets become available to the local WebSocket demo without code changes.

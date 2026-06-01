@@ -1,7 +1,7 @@
 // Orchestrates scraping a whole title: list page -> per-card detail pages -> RawCard[].
 import { join } from "node:path";
 import { Fetcher } from "./fetcher.js";
-import { parseCardListIndex, parseDetail } from "./parser.js";
+import { parseCardListIndex, parseDetail, parseTitleOptions, type TitleOption } from "./parser.js";
 import { RawCardSchema, type RawCard } from "./schema.js";
 
 /** Filesystem-safe filename for a card's image, e.g. UE19BT_SMD-1-001.png. */
@@ -21,6 +21,12 @@ export interface ScrapeOptions {
   /** If set, download each card image into this directory (filename = <cardNo>.png). */
   imagesDir?: string;
   onProgress?: (done: number, total: number, name: string) => void;
+}
+
+export async function listTitles(opts: Pick<ScrapeOptions, "cacheDir" | "throttleMs">): Promise<TitleOption[]> {
+  const fetcher = new Fetcher({ cacheDir: opts.cacheDir, throttleMs: opts.throttleMs ?? 800 });
+  const html = await fetcher.get(LIST_URL);
+  return parseTitleOptions(html);
 }
 
 /** Scrape every card for a given title (e.g. "SAKAMOTO DAYS"). */

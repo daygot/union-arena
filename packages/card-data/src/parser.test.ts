@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseCardListIndex, parseDetail } from "./parser.js";
+import { parseCardListIndex, parseDetail, parseTitleOptions } from "./parser.js";
 import { toCardDef } from "./mapper.js";
 import { RawCardSchema } from "./schema.js";
 
@@ -10,6 +10,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const fix = (f: string) => readFileSync(join(__dirname, "__fixtures__", f), "utf-8");
 
 describe("parseCardListIndex", () => {
+  it("extracts title options from the card list page", () => {
+    const titles = parseTitleOptions(fix("list_sakamoto.html"));
+    expect(titles.length).toBeGreaterThanOrEqual(20);
+    expect(titles).toContainEqual({ id: "SAKAMOTO DAYS", name: "SAKAMOTO DAYS" });
+  });
+
   it("extracts card entries from a title search result", () => {
     const entries = parseCardListIndex(fix("list_sakamoto.html"));
     expect(entries.length).toBeGreaterThan(100);

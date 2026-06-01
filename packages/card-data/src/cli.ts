@@ -3,7 +3,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { scrapeTitle } from "./scraper.js";
+import { coverageReport } from "./coverage.js";
+import { listTitles, scrapeTitle } from "./scraper.js";
 import { CardSetSchema } from "./schema.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -19,9 +20,34 @@ function arg(name: string): string | undefined {
 }
 
 async function main(): Promise<void> {
+  if (process.argv.includes("--list-titles")) {
+    const titles = await listTitles({ cacheDir: CACHE_DIR });
+    for (const title of titles) {
+      console.log(`${title.id}\t${title.name}`);
+    }
+    return;
+  }
+
+  if (process.argv.includes("--coverage")) {
+    const report = coverageReport(OUT_DIR);
+    for (const set of report.sets) {
+      const pct = set.cards === 0 ? 0 : Math.round((set.cardsWithMappedEffects / set.cards) * 100);
+      console.log(`${set.setCode}\t${set.cards} cards\t${set.cardsWithMappedEffects} mapped (${pct}%)\t${set.setName}`);
+    }
+    const totalPct = report.totals.cards === 0
+      ? 0
+      : Math.round((report.totals.cardsWithMappedEffects / report.totals.cards) * 100);
+    console.log(`TOTAL\t${report.totals.cards} cards\t${report.totals.cardsWithMappedEffects} mapped (${totalPct}%)`);
+    console.log(`Effects\t${JSON.stringify(report.totals.mappedEffectIds)}`);
+    console.log(`Triggers\t${JSON.stringify(report.totals.triggerTypes)}`);
+    return;
+  }
+
   const title = process.argv[2];
   if (!title || title.startsWith("--")) {
-    console.error('Usage: scrape "<TITLE>" [--limit N]');
+    console.error('Usage: scrape "<TITLE>" [--limit N] [--images]');
+    console.error("       scrape --list-titles");
+    console.error("       scrape --coverage");
     process.exit(1);
   }
   const limitStr = arg("--limit");

@@ -20,6 +20,25 @@ export interface ListEntry {
   imagePath: string;
 }
 
+export interface TitleOption {
+  id: string;
+  name: string;
+}
+
+export function parseTitleOptions(html: string): TitleOption[] {
+  const root = parse(html);
+  const out: TitleOption[] = [];
+  const seen = new Set<string>();
+  for (const option of root.querySelectorAll("select[name='selectTitle'] option")) {
+    const id = (option.getAttribute("value") ?? "").trim();
+    const name = option.text.replace(/\s+/g, " ").trim();
+    if (!id || !name || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, name });
+  }
+  return out;
+}
+
 export function parseCardListIndex(html: string): ListEntry[] {
   const root = parse(html);
   const out: ListEntry[] = [];

@@ -1,7 +1,7 @@
 // Loads real scraped card data and assembles demo decks for the skeleton.
 // NOTE: this is a dev/demo loader. Real deckbuilding + validation happens later;
 // here we just need legal-enough decks to drive the engine on screen.
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { toCardDef, RawCardSchema } from "@union-arena/card-data";
@@ -43,7 +43,9 @@ export function loadCards(imageBaseUrl = `http://localhost:${process.env.PORT ??
   const defs: Record<string, CardDef> = { [DEMO_AP.cardNumber]: DEMO_AP };
   const playable: string[] = [];
 
-  const setFiles = ["UE19BT.json"]; // extend as more sets are scraped
+  const setFiles = existsSync(SETS_DIR)
+    ? readdirSync(SETS_DIR).filter((file) => file.endsWith(".json")).sort()
+    : [];
   for (const file of setFiles) {
     const p = resolve(SETS_DIR, file);
     if (!existsSync(p)) continue;

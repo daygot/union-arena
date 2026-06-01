@@ -1,8 +1,10 @@
 export * from "./schema.js";
 export { Fetcher } from "./fetcher.js";
 export type { FetcherOptions } from "./fetcher.js";
-export { parseCardListIndex, parseDetail } from "./parser.js";
-export type { ListEntry, ParseDetailContext } from "./parser.js";
-export { scrapeTitle } from "./scraper.js";
+export { parseCardListIndex, parseDetail, parseTitleOptions } from "./parser.js";
+export type { ListEntry, ParseDetailContext, TitleOption } from "./parser.js";
+export { listTitles, scrapeTitle } from "./scraper.js";
 export type { ScrapeOptions } from "./scraper.js";
 export { toCardDef } from "./mapper.js";
+export { coverageReport } from "./coverage.js";
+export type { CoverageReport, CoverageSetSummary } from "./coverage.js";

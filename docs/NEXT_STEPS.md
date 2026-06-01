@@ -17,6 +17,12 @@
 - **Multiplayer hardening:** room lifecycle, reconnects, spectators, server-side room cleanup, and server deploy config.
 - **Data pipeline:** scrape/import more sets while keeping generated card JSON/images out of public git unless we decide otherwise.
 
+## Current Local Card Corpus
+
+- `UE19BT`: SAKAMOTO DAYS, 174 cards.
+- `UE02BT`: HUNTER X HUNTER, 427 cards.
+- Current effect coverage report: 601 local cards, 6 mapped effect-bearing cards. This means card browsing/deck data is expanding faster than engine behavior, so the next high-leverage work is mapping common text patterns into effects.
+
 ## Hosting Plan
 
 - GitHub Pages: static frontend and demo mode.
