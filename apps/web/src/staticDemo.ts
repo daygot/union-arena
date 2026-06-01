@@ -13,13 +13,13 @@ import type { GameConnection } from "./useGame.js";
 function def(partial: Partial<CardDef> & { id: string; name: string }): CardDef {
   return {
     cardNumber: partial.id,
-    sourceCode: "DMO",
+    sourceCode: "SMD",
     type: "character",
-    color: "red",
+    color: "yellow",
     requiredEnergy: [],
     apCost: 1,
     bp: 1000,
-    energyGeneration: [{ color: "red", amount: 1 }],
+    energyGeneration: [{ color: "yellow", amount: 1 }],
     affinities: [],
     keywords: [],
     hasTrigger: false,
@@ -30,8 +30,10 @@ function def(partial: Partial<CardDef> & { id: string; name: string }): CardDef 
 }
 
 const DEMO_DEFS: Record<string, CardDef> = {
-  AP: def({
-    id: "AP",
+  "DEMO-AP": def({
+    id: "DEMO-AP",
+    cardNumber: "DEMO-AP",
+    sourceCode: "DEMO",
     name: "AP",
     type: "site",
     color: "yellow",
@@ -39,50 +41,81 @@ const DEMO_DEFS: Record<string, CardDef> = {
     energyGeneration: [],
     text: "Action Point card.",
   }),
-  ENERGY: def({
-    id: "ENERGY",
-    name: "Training Grounds",
-    type: "site",
-    color: "red",
-    apCost: 0,
-    energyGeneration: [{ color: "red", amount: 1 }],
-    text: "Generates red energy while on the energy line.",
+  "SMD-1-001": def({
+    id: "UE19BT/SMD-1-001",
+    cardNumber: "SMD-1-001",
+    name: "Obiguro",
+    bp: 500,
+    effectIds: ["buff_other_3000_eot"],
+    hasTrigger: true,
+    triggerType: "active",
+    text: "Choose up to one other character on your field. It gains 3000 BP until the end of the turn.\nChoose one character on your field and switch it to active. It gains 3000 BP until the end of the turn.",
+    imageUrl: "https://www.unionarena-tcg.com/na/images/cardlist/card/UE19BT_SMD-1-001.png?v3",
   }),
-  ROOKIE: def({
-    id: "ROOKIE",
-    name: "Rookie Fighter",
+  "SMD-1-002": def({
+    id: "UE19BT/SMD-1-002",
+    cardNumber: "SMD-1-002",
+    name: "Piisuke",
     bp: 1000,
-    apCost: 1,
-    text: "A small character for testing play and attack flow.",
+    text: "This character gains energy generation and \"At the end of the main phase, sideline this character\" until the end of the turn.",
+    imageUrl: "https://www.unionarena-tcg.com/na/images/cardlist/card/UE19BT_SMD-1-002.png?v3",
   }),
-  STEP: def({
-    id: "STEP",
-    name: "Step Specialist",
+  "SMD-1-003": def({
+    id: "UE19BT/SMD-1-003",
+    cardNumber: "SMD-1-003",
+    name: "Boiled",
+    bp: 3500,
+    effectIds: ["block_guard_2000"],
+    text: "(When this character blocks for the first time this turn, switch it to active.) If your opponent's attacking character has 3000 or less base BP, this character gains 2000 BP until the end of the battle.",
+    imageUrl: "https://www.unionarena-tcg.com/na/images/cardlist/card/UE19BT_SMD-1-003.png?v3",
+  }),
+  "SMD-1-004": def({
+    id: "UE19BT/SMD-1-004",
+    cardNumber: "SMD-1-004",
+    name: "Heisuke Mashimo",
     bp: 1500,
-    keywords: ["step"],
-    text: "Step",
+    hasTrigger: true,
+    triggerType: "get",
+    text: "Add this card to your hand.",
+    imageUrl: "https://www.unionarena-tcg.com/na/images/cardlist/card/UE19BT_SMD-1-004.png?v3",
   }),
-  STRIKER: def({
-    id: "STRIKER",
-    name: "Union Striker",
-    bp: 3000,
-    requiredEnergy: [{ color: "red", amount: 1 }],
-    apCost: 1,
-    text: "A heavier body that asks you to set up energy first.",
-  }),
-  RAID: def({
-    id: "RAID",
-    name: "Raid Captain",
+  "SMD-1-007": def({
+    id: "UE19BT/SMD-1-007",
+    cardNumber: "SMD-1-007",
+    name: "Heisuke Mashimo",
     bp: 4000,
-    requiredEnergy: [{ color: "red", amount: 1 }],
     apCost: 1,
+    requiredEnergy: [{ color: "yellow", amount: 1 }],
+    hasTrigger: true,
+    triggerType: "draw",
+    text: "Choose up to one character on your opponent's front line. Place it face up into their life area.\nDraw a card.",
+    imageUrl: "https://www.unionarena-tcg.com/na/images/cardlist/card/UE19BT_SMD-1-007.png?v3",
+  }),
+  "SMD-1-008": def({
+    id: "UE19BT/SMD-1-008",
+    cardNumber: "SMD-1-008",
+    name: "Heisuke Mashimo",
+    bp: 4000,
+    apCost: 1,
+    requiredEnergy: [{ color: "yellow", amount: 1 }],
     keywords: ["raid"],
-    text: "Raid",
+    hasTrigger: true,
+    triggerType: "raid",
+    text: "<Heisuke Mashimo> Switch to active. May move to the front line. This character gains until the end of the turn. Turn up to one of your life cards face up. Your opponent chooses one of their life cards. If it is face down, turn it face up. If there are a combined total of three or more face-up cards in your and your opponent's decks and life areas, this character gains until the end of the turn.\nAdd this card to your hand, or if you have the required energy, perform Raid with it.",
+    imageUrl: "https://www.unionarena-tcg.com/na/images/cardlist/card/UE19BT_SMD-1-008.png?v3",
+  }),
+  "SMD-1-009": def({
+    id: "UE19BT/SMD-1-009",
+    cardNumber: "SMD-1-009",
+    name: "Lu Wutang",
+    bp: 2000,
+    text: "Draw a card.",
+    imageUrl: "https://www.unionarena-tcg.com/na/images/cardlist/card/UE19BT_SMD-1-009.png?v3",
   }),
 };
 
 function makeDeck(): string[] {
-  const pattern = ["ENERGY", "ROOKIE", "STEP", "STRIKER", "RAID"];
+  const pattern = ["SMD-1-001", "SMD-1-002", "SMD-1-003", "SMD-1-004", "SMD-1-007", "SMD-1-008", "SMD-1-009"];
   return Array.from({ length: 50 }, (_, i) => pattern[i % pattern.length]!);
 }
 
@@ -92,8 +125,8 @@ function createDemoState(): GameState {
     seed: 20260601,
     defs: DEMO_DEFS,
     decks: {
-      p1: { cards: makeDeck(), apCardId: "AP" },
-      p2: { cards: makeDeck(), apCardId: "AP" },
+      p1: { cards: makeDeck(), apCardId: "DEMO-AP" },
+      p2: { cards: makeDeck(), apCardId: "DEMO-AP" },
     },
   });
   state = {

@@ -522,10 +522,11 @@ function PlayerSide(props: {
     <section className={`side ${who}`}>
       <div className="side-head">
         <h2>{label} <span className="tag">{who}</span></h2>
-        <div className="counts">
+      <div className="counts">
           <span>✋ {p.hand.length}</span>
           <span>❤️ {p.life.length}</span>
           <span>🂠 {p.deck.length}</span>
+          <span>⛔ {p.removal.length}</span>
           <span>🪦 {p.sideline.length}</span>
         </div>
       </div>
@@ -541,13 +542,37 @@ function PlayerSide(props: {
                 selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
             ))}
       </Zone>
-      <Zone name={`Sideline (${p.sideline.length})`} kind="sideline">
-        {p.sideline.map((iid) => (
-          <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
-            variant="field"
-            selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
-        ))}
-      </Zone>
+      <div className="side-stacks">
+        <StackZone name="Life" count={p.life.length} kind="life">
+          {p.life.map((iid) => {
+            const inst = state.instances[iid]!;
+            return inst.faceUp ? (
+              <Card key={iid} iid={iid} inst={inst} def={def(iid)}
+                variant="field"
+                selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
+            ) : (
+              <button key={iid} type="button" className="card facedown mini" aria-label="Face-down life card" />
+            );
+          })}
+        </StackZone>
+        <StackZone name="Deck" count={p.deck.length} kind="deck">
+          {p.deck.length > 0 && <div className="card facedown stack-card" />}
+        </StackZone>
+        <StackZone name="Removal" count={p.removal.length} kind="removal">
+          {p.removal.map((iid) => (
+            <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
+              variant="field"
+              selectable={false} selected={false} onSelect={onSelect} onPreview={onPreview} />
+          ))}
+        </StackZone>
+        <StackZone name="Sideline" count={p.sideline.length} kind="sideline">
+          {p.sideline.map((iid) => (
+            <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
+              variant="field"
+              selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
+          ))}
+        </StackZone>
+      </div>
     </section>
   );
 }
@@ -576,6 +601,15 @@ function Zone(props: { name: string; children: React.ReactNode; kind?: "front" |
     <div className={`zone ${props.kind ? `zone-${props.kind}` : ""}`}>
       <div className="zone-label">{props.name}</div>
       <div className="zone-cards">{props.children}</div>
+    </div>
+  );
+}
+
+function StackZone(props: { name: string; count: number; kind: "life" | "deck" | "removal" | "sideline"; children: React.ReactNode }) {
+  return (
+    <div className={`stack-zone stack-${props.kind}`}>
+      <div className="zone-label">{props.name} ({props.count})</div>
+      <div className="stack-cards">{props.children}</div>
     </div>
   );
 }

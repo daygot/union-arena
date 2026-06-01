@@ -2,14 +2,17 @@
 
 ## Best Immediate Track
 
-1. Ship the GitHub Pages static demo so the UI is easy to open and test.
-2. Tighten the single-player/static demo loop until core interactions feel obvious.
-3. Host the WebSocket server separately once the frontend flow is worth sharing live.
+1. Import more real cards/sets, then expand effect-pattern coverage so those cards do useful engine work.
+2. Keep the board UI honest: every public zone should be visible and inspectable.
+3. Use the static demo as a smoke test only; it should render basic functions and behaviors, not become the product.
+4. Host the WebSocket server separately once the core loop is worth testing live.
 
 ## Product Priorities
 
-- **Frontend-only demo polish:** add a reset button, better error messages, clearer disabled states, and scripted fixture states for attack, trigger, raid, and end-turn testing.
-- **Rules coverage:** keep encoding card text into data-driven effects, especially energy generation, search/get effects, removal, and common combat modifiers.
+- **More cards:** scrape additional official titles, keep generated cache/images out of git, and decide how much browser-safe card metadata to commit.
+- **Rules coverage:** keep encoding card text into data-driven effects, especially energy generation, search/get effects, removal, life manipulation, and common combat modifiers.
+- **Board UI:** show front line, energy line, hand, AP, life, deck, sideline, and removal for both players.
+- **Frontend-only demo polish:** use real card metadata where possible, add a reset button, better error messages, clearer disabled states, and scripted fixture states for attack, trigger, raid, and end-turn testing.
 - **Deckbuilder:** local deck list editor, validation, import/export, and choosing a deck before joining a room.
 - **Multiplayer hardening:** room lifecycle, reconnects, spectators, server-side room cleanup, and server deploy config.
 - **Data pipeline:** scrape/import more sets while keeping generated card JSON/images out of public git unless we decide otherwise.

@@ -145,8 +145,8 @@ body {
   grid-template-columns: minmax(0, 1fr) minmax(160px, 22%);
   grid-template-areas:
     "head ap"
-    "front sideline"
-    "energy sideline"
+    "front stacks"
+    "energy stacks"
     "hand hand";
   gap: 10px 14px;
   padding: 4px 0;
@@ -231,7 +231,6 @@ body {
 .zone-energy { grid-area: energy; }
 .zone-hand { grid-area: hand; }
 .zone-hiddenHand { grid-area: hand; }
-.zone-sideline { grid-area: sideline; }
 .zone-label {
   display: inline-flex;
   align-items: center;
@@ -286,12 +285,44 @@ body {
   border-radius: 18px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 18px 42px rgba(0,0,0,.16);
 }
-.zone-sideline .zone-cards {
-  min-height: 180px;
+.side-stacks {
+  grid-area: stacks;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.stack-zone {
+  min-width: 0;
+}
+.stack-cards {
+  min-height: 72px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   align-content: flex-start;
   justify-content: flex-end;
-  padding-inline: 8px;
-  background: rgba(0,0,0,.05);
+  padding: 8px;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,.008)),
+    rgba(0,0,0,.075);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.stack-life .stack-cards {
+  min-height: 98px;
+  background:
+    linear-gradient(180deg, rgba(255,107,107,.08), rgba(255,255,255,.01)),
+    rgba(0,0,0,.075);
+}
+.stack-deck .stack-cards {
+  min-height: 80px;
+  align-items: center;
+}
+.stack-removal .stack-cards {
+  min-height: 74px;
+  background:
+    linear-gradient(180deg, rgba(176,123,255,.08), rgba(255,255,255,.01)),
+    rgba(0,0,0,.075);
 }
 
 .card {
@@ -305,6 +336,13 @@ body {
 }
 .card-field { width: 88px; aspect-ratio: 5 / 7; }
 .card-hand { width: clamp(122px, 9vw, 160px); aspect-ratio: 5 / 7; }
+.stack-cards .card-field,
+.card.facedown.mini {
+  width: 48px;
+}
+.stack-cards .field-chip {
+  display: none;
+}
 .card[aria-disabled="true"] { opacity: .82; }
 .card.unplayable {
   filter: grayscale(.95) brightness(.48);
@@ -334,6 +372,29 @@ body {
     repeating-linear-gradient(45deg, #16241f, #16241f 6px, #21362f 6px, #21362f 12px);
   border: 1px solid rgba(255,255,255,.12);
   box-shadow: 0 8px 18px rgba(0,0,0,.22);
+}
+.card.facedown.stack-card {
+  position: relative;
+  margin-right: 10px;
+}
+.card.facedown.stack-card::before,
+.card.facedown.stack-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(125,183,255,.16), rgba(255,216,74,.1)),
+    repeating-linear-gradient(45deg, #16241f, #16241f 6px, #21362f 6px, #21362f 12px);
+  border: 1px solid rgba(255,255,255,.12);
+  z-index: -1;
+}
+.card.facedown.stack-card::before {
+  transform: translate(5px, 4px);
+}
+.card.facedown.stack-card::after {
+  transform: translate(10px, 8px);
+  opacity: .75;
 }
 .card-art {
   display: block;
@@ -548,10 +609,13 @@ body {
       "front"
       "energy"
       "hand"
-      "sideline";
+      "stacks";
   }
   .ap-strip { justify-self: stretch; }
-  .zone-sideline .zone-cards { justify-content: flex-start; }
+  .side-stacks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stack-cards { justify-content: flex-start; }
   .inspector {
     grid-row: auto;
     position: static;
