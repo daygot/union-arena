@@ -11,7 +11,6 @@
 import {
   getDef,
   getInst,
-  hasRequiredEnergy,
   opponentOf,
   withInstance,
   withPlayer,
@@ -19,6 +18,7 @@ import {
 } from "./helpers.js";
 import type { ApplyResult, Color, GameState, Seat, TriggerType } from "./types.js";
 import { err, ok } from "./helpers.js";
+import { performRaid } from "./raid.js";
 
 export interface TriggerInput {
   /** The trigger player (attacked / revealed). */
@@ -148,45 +148,7 @@ function resolveRaid(state: GameState, input: TriggerInput): ApplyResult {
     const s = withPlayer(state, seat, (p) => ({ ...p, hand: [...p.hand, iid] }));
     return ok(withInstance(s, iid, (i) => ({ ...i, faceUp: false })));
   }
-  // Validate the base character: must be your own field character without an existing Raid.
-  const base = state.instances[targetIid];
-  const player = state.players[seat];
-  const onField =
-    player.frontLine.includes(targetIid) || player.energyLine.includes(targetIid);
-  if (!base || base.controller !== seat || !onField) {
-    return err("raid trigger must target your own field character.");
-  }
-  if (base.raidUnder.length > 0) {
-    return err("raid trigger cannot raid onto a character that is already a Raid stack.");
-  }
-  // Energy requirement for the revealed (Raid) card.
-  const raidDef = getDef(state, iid);
-  if (!hasRequiredEnergy(state, seat, raidDef)) {
-    return err("not enough energy to Raid this card.");
-  }
-  // Determine where the raid stack sits (inherit the base's line).
-  const onFront = player.frontLine.includes(targetIid);
-  // Perform Raid: revealed card becomes the top of a stack over the base.
-  // It inherits the base's orientation; underlying abilities go inactive (modeled by raidUnder).
-  let s = withInstance(state, iid, (i) => ({
-    ...i,
-    owner: seat,
-    controller: seat,
-    orientation: base.orientation,
-    raidUnder: [targetIid, ...base.raidUnder],
-    faceUp: true,
-  }));
-  // Replace the base iid in its line with the new top (the Raid card).
-  s = withPlayer(s, seat, (p) => ({
-    ...p,
-    frontLine: onFront
-      ? p.frontLine.map((x) => (x === targetIid ? iid : x))
-      : p.frontLine,
-    energyLine: onFront
-      ? p.energyLine
-      : p.energyLine.map((x) => (x === targetIid ? iid : x)),
-  }));
-  return ok(s);
+  return performRaid(state, { seat, raidIid: iid, targetIid });
 }
 
 // 4. color — effect depends on the revealed card's color.

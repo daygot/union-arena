@@ -34,6 +34,7 @@ reg(def({ id: "SMALL", bp: 1000, apCost: 1, requiredEnergy: [{ color: "red", amo
 reg(def({ id: "STEP", bp: 1000, keywords: ["step"] as Keyword[] }));
 reg(def({ id: "SNIPE", bp: 2000, keywords: ["snipe"] as Keyword[] }));
 reg(def({ id: "IMPACT", bp: 1000, keywords: ["impact"] as Keyword[] }));
+reg(def({ id: "RAID", bp: 4000, keywords: ["raid"] as Keyword[], apCost: 1, requiredEnergy: [{ color: "red", amount: 1 }] }));
 reg(def({ id: "AP", type: "site", name: "AP", energyGeneration: [], apCost: 0 }));
 
 function must(r: ApplyResult): GameState {
@@ -179,6 +180,50 @@ describe("main phase: playing cards", () => {
     expect(applyIntent(g, { type: "playCard", seat: "p1", iid: site, to: "frontLine" }).ok).toBe(false);
     g = must(applyIntent(g, { type: "playCard", seat: "p1", iid: site, to: "energyLine" }));
     expect(g.players.p1.energyLine).toContain(site);
+  });
+
+  it("performs Raid from hand onto a base character, paying AP and activating the stack", () => {
+    let g = fixture({
+      phase: "main",
+      p1: { energyLine: ["ENERGY"], frontLine: ["SMALL"], hand: ["RAID"] },
+    });
+    const raid = g.players.p1.hand[0]!;
+    const base = g.players.p1.frontLine[0]!;
+    g.instances[base] = { ...g.instances[base]!, orientation: "resting" };
+    const apBefore = g.players.p1.ap.filter((i) => g.instances[i]!.orientation === "active").length;
+
+    g = must(applyIntent(g, { type: "raid", seat: "p1", iid: raid, targetIid: base }));
+
+    expect(g.players.p1.hand).not.toContain(raid);
+    expect(g.players.p1.frontLine).toContain(raid);
+    expect(g.players.p1.frontLine).not.toContain(base);
+    expect(g.instances[raid]!.raidUnder).toEqual([base]);
+    expect(g.instances[raid]!.orientation).toBe("active");
+    const apAfter = g.players.p1.ap.filter((i) => g.instances[i]!.orientation === "active").length;
+    expect(apAfter).toBe(apBefore - 1);
+  });
+
+  it("rejects Raid without required energy or onto an existing Raid stack", () => {
+    const noEnergy = fixture({ phase: "main", p1: { frontLine: ["SMALL"], hand: ["RAID"] } });
+    expect(applyIntent(noEnergy, {
+      type: "raid",
+      seat: "p1",
+      iid: noEnergy.players.p1.hand[0]!,
+      targetIid: noEnergy.players.p1.frontLine[0]!,
+    }).ok).toBe(false);
+
+    const stacked = fixture({
+      phase: "main",
+      p1: { energyLine: ["ENERGY"], frontLine: ["SMALL"], hand: ["RAID"] },
+    });
+    const base = stacked.players.p1.frontLine[0]!;
+    stacked.instances[base] = { ...stacked.instances[base]!, raidUnder: ["under-card"] };
+    expect(applyIntent(stacked, {
+      type: "raid",
+      seat: "p1",
+      iid: stacked.players.p1.hand[0]!,
+      targetIid: base,
+    }).ok).toBe(false);
   });
 });
 

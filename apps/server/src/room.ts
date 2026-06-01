@@ -31,8 +31,6 @@ export class GameRoom {
       defs: loaded.defs,
       decks: { p1: deck, p2: deck },
     });
-    // Skip mulligans for the skeleton; jump straight into turn 1.
-    this.state = beginFirstTurn(this.state);
   }
 
   /** Assign the next open seat, else spectator. */
@@ -56,11 +54,26 @@ export class GameRoom {
   submit(seat: Seat | "spectator", intent: Intent): string | null {
     if (seat === "spectator") return "Spectators cannot act.";
     if (intent.seat !== seat) return "You can only act for your own seat.";
+    if (this.awaitingMulligans() && intent.type !== "mulligan") {
+      return "Both players must finish mulligan decisions before the game starts.";
+    }
     const res = applyIntent(this.state, intent);
     if (!res.ok) return res.error;
     this.state = res.state;
+    if (this.awaitingMulligans() === false && this.state.turn === 1 && this.state.phase === "start") {
+      const alreadyStarted = this.state.log.some((event) => event.kind === "phase");
+      if (!alreadyStarted) this.state = beginFirstTurn(this.state);
+    }
     this.broadcast();
     return null;
+  }
+
+  private awaitingMulligans(): boolean {
+    return (
+      this.state.turn === 1 &&
+      this.state.phase === "start" &&
+      (!this.state.players.p1.hasMulliganed || !this.state.players.p2.hasMulliganed)
+    );
   }
 
   getState(): GameState {

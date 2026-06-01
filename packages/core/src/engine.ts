@@ -25,6 +25,7 @@ import {
 } from "./helpers.js";
 import { resolveTriggerEffect } from "./triggers.js";
 import { runEffects, runEffect, effectsFor } from "./effects.js";
+import { performRaid } from "./raid.js";
 
 const PHASE_ORDER: Phase[] = ["start", "movement", "main", "attack", "end"];
 
@@ -45,6 +46,8 @@ export function applyIntent(state: GameState, intent: Intent): ApplyResult {
       return handleMove(state, intent.seat, intent.iid, intent.to);
     case "playCard":
       return handlePlayCard(state, intent.seat, intent.iid, intent.to, intent.targetIid);
+    case "raid":
+      return handleRaid(state, intent.seat, intent.iid, intent.targetIid);
     case "useEvent":
       return handleUseEvent(state, intent.seat, intent.iid);
     case "declareAttack":
@@ -59,8 +62,6 @@ export function applyIntent(state: GameState, intent: Intent): ApplyResult {
       return handleAdvancePhase(state, intent.seat); // endTurn == advance from end phase
     case "activateAbility":
       return handleActivateAbility(state, intent.seat, intent.iid, intent.effectId);
-    case "raid":
-      return err(`Intent "${intent.type}" not yet implemented.`);
     default:
       return err(`Unknown intent.`);
   }
@@ -248,6 +249,27 @@ function handlePlayCard(
   const fx = runEffects(s, iid, "onPlay", { ...(targetIid !== undefined ? { targetIid } : {}) });
   if (!fx.ok) return fx;
   return ok(fx.state);
+}
+
+function handleRaid(
+  state: GameState,
+  seat: Seat,
+  iid: string,
+  targetIid: string,
+): ApplyResult {
+  if (seat !== state.activeSeat) return err("Not your turn.");
+  if (state.phase !== "main") return err("Can only Raid during main phase.");
+  const p = state.players[seat];
+  if (!p.hand.includes(iid)) return err("Raid card not in hand.");
+  const def = getDef(state, iid);
+  if (activeApCount(state, seat) < def.apCost) return err("Not enough AP.");
+
+  let s = payAp(state, seat, def.apCost);
+  s = withPlayer(s, seat, (pl) => ({ ...pl, hand: removeFrom(pl.hand, iid) }));
+  const raid = performRaid(s, { seat, raidIid: iid, targetIid });
+  if (!raid.ok) return raid;
+  const to = raid.state.players[seat].frontLine.includes(iid) ? "frontLine" : "energyLine";
+  return ok(log(raid.state, { kind: "play", seat, iid, to }, { kind: "info", message: `${def.name} raided.` }));
 }
 
 function handleActivateAbility(

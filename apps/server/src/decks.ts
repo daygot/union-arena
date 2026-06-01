@@ -9,8 +9,9 @@ import type { CardDef } from "@union-arena/core";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** Path to the scraped sets directory (card-data package). */
+/** Path to the scraped card-data package assets. */
 const SETS_DIR = resolve(__dirname, "../../../packages/card-data/data/sets");
+export const IMAGES_DIR = resolve(__dirname, "../../../packages/card-data/data/images");
 
 export interface LoadedCards {
   defs: Record<string, CardDef>;
@@ -38,7 +39,7 @@ const DEMO_AP: CardDef = {
 };
 
 /** Load every scraped set into a defs map + list of playable card numbers. */
-export function loadCards(): LoadedCards {
+export function loadCards(imageBaseUrl = `http://localhost:${process.env.PORT ?? 8787}/cards`): LoadedCards {
   const defs: Record<string, CardDef> = { [DEMO_AP.cardNumber]: DEMO_AP };
   const playable: string[] = [];
 
@@ -50,6 +51,7 @@ export function loadCards(): LoadedCards {
     for (const rawJson of json.cards ?? []) {
       const raw = RawCardSchema.parse(rawJson);
       const def = toCardDef(raw);
+      if (raw.localImage) def.imageUrl = `${imageBaseUrl}/${encodeURIComponent(raw.localImage)}`;
       defs[def.cardNumber] = def;
       if (def.type === "character" || def.type === "site" || def.type === "event") {
         playable.push(def.cardNumber);

@@ -42,6 +42,7 @@ const DEFS: Record<string, CardDef> = {
     id: "RAIDER",
     color: "red",
     requiredEnergy: [{ color: "red", amount: 1 }],
+    keywords: ["raid"],
     hasTrigger: true,
     triggerType: "raid",
   }),

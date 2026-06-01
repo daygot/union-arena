@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameState, Intent, Seat } from "@union-arena/core";
 import type { ClientMessage, ServerMessage } from "@union-arena/server/src/protocol.js";
 
-const WS_URL = (import.meta as { env?: { VITE_WS_URL?: string } }).env?.VITE_WS_URL
-  ?? "ws://localhost:8787";
+const env = (import.meta as { env?: { DEV?: boolean; VITE_WS_URL?: string } }).env;
+const WS_URL = env?.VITE_WS_URL ?? (env?.DEV ? "ws://localhost:8787" : "");
 
 export interface GameConnection {
   connected: boolean;
@@ -13,7 +13,7 @@ export interface GameConnection {
   send: (intent: Intent) => void;
 }
 
-export function useGame(roomId: string): GameConnection {
+export function useGame(roomId: string, enabled = true): GameConnection {
   const [connected, setConnected] = useState(false);
   const [seat, setSeat] = useState<Seat | "spectator" | null>(null);
   const [state, setState] = useState<GameState | null>(null);
@@ -21,6 +21,12 @@ export function useGame(roomId: string): GameConnection {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
+    if (!WS_URL) {
+      setError("No WebSocket server is configured for this hosted build. Use Static Demo or set VITE_WS_URL.");
+      return;
+    }
+
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
@@ -40,7 +46,7 @@ export function useGame(roomId: string): GameConnection {
     };
 
     return () => ws.close();
-  }, [roomId]);
+  }, [enabled, roomId]);
 
   const send = useCallback((intent: Intent) => {
     const ws = wsRef.current;
