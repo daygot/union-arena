@@ -46,6 +46,8 @@ export const RawCardSchema = z.object({
   affinities: z.array(z.string()).default([]),
   /** Main ability text (verbatim). */
   effectText: z.string().default(""),
+  /** Timing icon alt text from the official effect block, e.g. "When Sidelined". */
+  effectTiming: z.string().default(""),
   /** Trigger ability text (verbatim), empty when no trigger. */
   triggerText: z.string().default(""),
   triggerType: TriggerTypeSchema.default("none"),

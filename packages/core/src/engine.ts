@@ -308,13 +308,14 @@ function handleUseEvent(state: GameState, seat: Seat, iid: string): ApplyResult 
   if (activeApCount(state, seat) < def.apCost) return err("Not enough AP.");
 
   let s = payAp(state, seat, def.apCost);
-  // Effect resolution is a no-op placeholder until the effect registry exists.
   s = withPlayer(s, seat, (pl) => ({
     ...pl,
     hand: removeFrom(pl.hand, iid),
     sideline: [...pl.sideline, iid],
   }));
-  return ok(log(s, { kind: "info", message: `${def.name} used (effect pending).` }, { kind: "play", seat, iid, to: "sideline" }));
+  const fx = runEffects(s, iid, "onUse", {});
+  if (!fx.ok) return fx;
+  return ok(log(fx.state, { kind: "info", message: `${def.name} used.` }, { kind: "play", seat, iid, to: "sideline" }));
 }
 
 // ---- Attack phase ----
@@ -392,6 +393,9 @@ function resolveBattle(state: GameState, attackerIid: string, defenderIid: strin
   if (aBp >= dBp) {
     winnerIid = attackerIid;
     s = sideline(s, defenderIid);
+    const fx = runEffects(s, defenderIid, "onSideline", {});
+    if (!fx.ok) return fx;
+    s = fx.state;
   } else {
     winnerIid = defenderIid;
     // Attacker is not sidelined when it loses.

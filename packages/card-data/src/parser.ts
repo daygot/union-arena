@@ -135,6 +135,8 @@ export function parseDetail(html: string, ctx: ParseDetailContext): RawCard {
   const typeText = ddText(root, "categoryData");
   const affinityText = ddText(root, "attributeData");
   const effectText = stripLabel(ddText(root, "effectData"), "Effect");
+  const effectTiming =
+    root.querySelector(".effectData .cardDataContents img")?.getAttribute("alt")?.trim() ?? "";
   const triggerDd = root.querySelector(".triggerData .cardDataContents");
   const triggerText = stripLabel(ddText(root, "triggerData"), "Trigger");
   const triggerType = classifyTriggerFromIcon(triggerDd);
@@ -175,6 +177,7 @@ export function parseDetail(html: string, ctx: ParseDetailContext): RawCard {
     generatedEnergy,
     affinities,
     effectText,
+    effectTiming,
     triggerText,
     triggerType,
     imageUrl,

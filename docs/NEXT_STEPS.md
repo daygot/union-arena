@@ -21,7 +21,8 @@
 
 - `UE19BT`: SAKAMOTO DAYS, 174 cards.
 - `UE02BT`: HUNTER X HUNTER, 427 cards.
-- Current effect coverage report: 601 local cards, 6 mapped effect-bearing cards. This means card browsing/deck data is expanding faster than engine behavior, so the next high-leverage work is mapping common text patterns into effects.
+- Current effect coverage report: 601 local cards, 52 mapped effect-bearing cards. Newly covered patterns include exact draw, draw-then-sideline, refresh up to two AP, and timing-aware "When Sidelined" effects.
+- Card browsing/deck data is still expanding faster than engine behavior, so the next high-leverage work is target-choice effects: removal, bounce, rest/freeze, search/look-at-top, and life manipulation.
 
 ## Hosting Plan
 

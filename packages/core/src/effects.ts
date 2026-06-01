@@ -7,11 +7,13 @@
 //
 // This is intentionally small and data-driven: add new ids + patterns as sets land.
 import type { ApplyResult, GameState, Seat } from "./types.js";
-import { effectiveBp, err, getDef, getInst, ok, opponentOf, withInstance, withPlayer } from "./helpers.js";
+import { effectiveBp, err, getDef, getInst, ok, opponentOf, removeFrom, withInstance, withPlayer } from "./helpers.js";
 
 /** When an effect fires. */
 export type EffectTrigger =
   | "onPlay" // when the card is played from hand to the field
+  | "onUse" // when an event card is used
+  | "onSideline" // when a card is moved to sideline
   | "onAttack" // when the card declares an attack
   | "onBlock" // when the card blocks
   | "activate"; // manual, player-initiated (activateAbility intent)
@@ -48,11 +50,42 @@ function onField(state: GameState, seat: Seat, iid: string): boolean {
   return p.frontLine.includes(iid) || p.energyLine.includes(iid);
 }
 
+function drawOne(state: GameState, seat: Seat): GameState {
+  const deck = state.players[seat].deck;
+  if (deck.length === 0) return state;
+  const [top, ...rest] = deck;
+  return withPlayer(state, seat, (p) => ({ ...p, deck: rest, hand: [...p.hand, top!] }));
+}
+
+function sidelineOneFromHand(state: GameState, seat: Seat): GameState {
+  const hand = state.players[seat].hand;
+  if (hand.length === 0) return state;
+  const iid = hand[hand.length - 1]!;
+  return withPlayer(state, seat, (p) => ({
+    ...p,
+    hand: removeFrom(p.hand, iid),
+    sideline: [...p.sideline, iid],
+  }));
+}
+
+function refreshAp(state: GameState, seat: Seat, max: number): GameState {
+  let s = state;
+  let refreshed = 0;
+  for (const iid of s.players[seat].ap) {
+    if (refreshed >= max) break;
+    if (getInst(s, iid).orientation === "resting") {
+      s = withInstance(s, iid, (i) => ({ ...i, orientation: "active" }));
+      refreshed++;
+    }
+  }
+  return s;
+}
+
 // ---- Registry ----------------------------------------------------------------
 
 export const EFFECTS: Record<string, EffectDef> = {
   // "Choose up to one other character on your field. It gains 3000 BP until end of turn."
-  // (SMD-1-001 on-play). Target optional ("up to one"); no target = fizzle (legal).
+  // Target optional ("up to one"); no target = fizzle (legal).
   buff_other_3000_eot: {
     id: "buff_other_3000_eot",
     when: "onPlay",
@@ -64,6 +97,13 @@ export const EFFECTS: Record<string, EffectDef> = {
       if (!onField(state, seat, targetIid)) return err("Target must be your own field character.");
       return ok(buff(state, targetIid, BUFF_EOT));
     },
+  },
+
+  buff_other_3000_eot_on_sideline: {
+    id: "buff_other_3000_eot_on_sideline",
+    when: "onSideline",
+    text: "When sidelined, choose up to one other character on your field. It gains 3000 BP until end of turn.",
+    run: (state, ctx) => EFFECTS.buff_other_3000_eot!.run(state, ctx),
   },
 
   // "This character gains 3000 BP until end of turn." (self buff on play/activate)
@@ -87,6 +127,41 @@ export const EFFECTS: Record<string, EffectDef> = {
       if (attackerBp <= 3000) return ok(buff(state, ctx.iid, 2000));
       return ok(state);
     },
+  },
+
+  draw_card_on_sideline: {
+    id: "draw_card_on_sideline",
+    when: "onSideline",
+    text: "When sidelined, draw a card.",
+    run: (state, ctx) => ok(drawOne(state, ctx.seat)),
+  },
+
+  draw_card_on_play: {
+    id: "draw_card_on_play",
+    when: "onPlay",
+    text: "When played, draw a card.",
+    run: (state, ctx) => ok(drawOne(state, ctx.seat)),
+  },
+
+  draw_card_then_sideline_card_on_sideline: {
+    id: "draw_card_then_sideline_card_on_sideline",
+    when: "onSideline",
+    text: "When sidelined, draw a card, then place one card from your hand into your sideline.",
+    run: (state, ctx) => ok(sidelineOneFromHand(drawOne(state, ctx.seat), ctx.seat)),
+  },
+
+  draw_card_then_sideline_card_on_play: {
+    id: "draw_card_then_sideline_card_on_play",
+    when: "onPlay",
+    text: "When played, draw a card, then place one card from your hand into your sideline.",
+    run: (state, ctx) => ok(sidelineOneFromHand(drawOne(state, ctx.seat), ctx.seat)),
+  },
+
+  refresh_up_to_2_ap_on_use: {
+    id: "refresh_up_to_2_ap_on_use",
+    when: "onUse",
+    text: "Choose up to two of your AP cards and switch them to active.",
+    run: (state, ctx) => ok(refreshAp(state, ctx.seat, 2)),
   },
 };
 

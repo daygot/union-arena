@@ -56,6 +56,7 @@ describe("parseDetail", () => {
 
   it("captures effect and trigger text", () => {
     expect(raw.effectText.toLowerCase()).toContain("3000 bp");
+    expect(raw.effectTiming).toBe("When Sidelined");
     expect(raw.triggerText.toLowerCase()).toContain("switch it to active");
     // Trigger type comes from the official icon (alt="Active"), not text guessing.
     expect(raw.triggerType).toBe("active");
@@ -78,6 +79,7 @@ describe("toCardDef mapping", () => {
     expect(def.color).toBe("yellow");
     expect(def.energyGeneration).toEqual([{ color: "yellow", amount: 1 }]);
     expect(def.hasTrigger).toBe(true);
+    expect(def.effectIds).toContain("buff_other_3000_eot_on_sideline");
     expect(typeof def.text).toBe("string");
     expect(def.text.length).toBeGreaterThan(0);
   });
