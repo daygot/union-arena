@@ -31,6 +31,12 @@ Open `http://localhost:5173/?demo=goldfish`.
 
 GitHub Pages serves the static web build from the `gh-pages` branch.
 
+Build Pages locally with:
+
+```bash
+corepack pnpm --filter @union-arena/web build:pages
+```
+
 The hosted build supports:
 
 - `?demo=goldfish` for a browser-only single-player goldfish mode using the real core reducer and real sample cards.
