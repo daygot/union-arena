@@ -31,12 +31,20 @@ body {
   font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
-.app { display: flex; flex-direction: column; height: 100%; }
+.app {
+  --field-card-w: clamp(48px, min(5.2vw, 7.2vh), 74px);
+  --hand-card-w: clamp(72px, min(7.4vw, 10.6vh), 112px);
+  --stack-card-w: clamp(30px, min(3.4vw, 5vh), 42px);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
 .center { display: grid; place-items: center; height: 100%; color: var(--muted); }
 
 .topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
-  padding: 12px 18px; border-bottom: 1px solid var(--line);
+  padding: 8px 14px; border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(15,23,29,.96), rgba(11,18,22,.88));
   box-shadow: 0 10px 28px rgba(0,0,0,.24);
 }
@@ -119,9 +127,15 @@ body {
 }
 
 .board {
-  flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 328px; gap: 18px;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(236px, 22vw, 308px);
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 8px 12px;
   position: relative;
-  padding: 18px; overflow: auto;
+  padding: 10px 12px;
+  overflow: hidden;
   background:
     radial-gradient(1100px 600px at 44% 45%, rgba(44,102,82,.44), transparent 72%),
     linear-gradient(90deg, rgba(255,255,255,.035), transparent 18%, transparent 82%, rgba(255,255,255,.025)),
@@ -130,8 +144,8 @@ body {
 .board::before {
   content: "";
   position: absolute;
-  left: 18px;
-  right: 364px;
+  left: 12px;
+  right: calc(clamp(236px, 22vw, 308px) + 24px);
   top: 50%;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(237,245,241,.22), transparent);
@@ -141,28 +155,33 @@ body {
 .board > .midline { grid-column: 1; }
 
 .side {
+  min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(160px, 22%);
+  grid-template-columns: minmax(0, 1fr) minmax(174px, 20%);
+  grid-template-rows: auto minmax(0, .9fr) minmax(0, .7fr) minmax(0, 1fr);
   grid-template-areas:
     "head ap"
     "front stacks"
     "energy stacks"
     "hand hand";
-  gap: 10px 14px;
-  padding: 4px 0;
+  gap: 5px 10px;
+  padding: 0;
+  overflow: hidden;
 }
 .side.p1,
 .side.p2 { box-shadow: none; }
 .side-head {
   grid-area: head;
   display: flex; justify-content: flex-start; align-items: center; gap: 12px;
-  min-height: 40px;
+  min-height: 32px;
+  min-width: 0;
+  overflow: hidden;
 }
 .side-head h2 { font-size: 15px; margin: 0; font-weight: 850; }
 .tag { color: var(--muted); font-weight: 400; font-size: 12px; }
 .counts {
-  display: flex; gap: 8px; color: var(--muted); font-variant-numeric: tabular-nums;
-  padding: 5px 8px;
+  display: flex; gap: 6px; color: var(--muted); font-variant-numeric: tabular-nums;
+  padding: 4px 7px;
   border: 1px solid rgba(255,255,255,.07);
   border-radius: 999px;
   background: rgba(0,0,0,.18);
@@ -171,7 +190,7 @@ body {
   display: flex;
   gap: 5px;
   align-items: center;
-  padding: 5px 7px;
+  padding: 4px 6px;
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 999px;
   background: rgba(0,0,0,.22);
@@ -187,8 +206,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  min-width: 28px;
-  height: 22px;
+  min-width: 25px;
+  height: 20px;
   justify-content: center;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 999px;
@@ -207,9 +226,9 @@ body {
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
-  padding: 9px 10px;
+  padding: 6px 8px;
   background:
     linear-gradient(180deg, rgba(255, 216, 74, .12), rgba(255, 216, 74, .05)),
     rgba(0,0,0,.14);
@@ -220,7 +239,7 @@ body {
 .ap-summary {
   display: grid;
   gap: 0;
-  min-width: 48px;
+  min-width: 42px;
   color: var(--yellow);
 }
 .ap-summary span {
@@ -230,17 +249,17 @@ body {
 }
 .ap-summary b {
   color: var(--text);
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .ap-pips {
   display: flex;
-  gap: 8px;
+  gap: 5px;
 }
 .ap-pip {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -280,19 +299,19 @@ body {
   margin: 0 0 3px 2px;
 }
 .zone-cards {
-  display: flex; gap: 9px; flex-wrap: wrap; min-height: 112px;
+  display: flex; gap: 7px; flex-wrap: wrap; min-height: calc(var(--field-card-w) * 1.4 + 14px);
   background:
     linear-gradient(180deg, rgba(0,0,0,.1), rgba(255,255,255,.015)),
     rgba(0,0,0,.045);
   border: 0;
   border-radius: 14px;
-  padding: 10px 0;
+  padding: 7px 0;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
 }
 .zone-front .zone-cards,
 .zone-energy .zone-cards {
   align-items: center;
-  padding-inline: 12px;
+  padding-inline: 9px;
 }
 .zone-front .zone-cards {
   background:
@@ -300,7 +319,7 @@ body {
     rgba(0,0,0,.055);
 }
 .zone-energy .zone-cards {
-  min-height: 96px;
+  min-height: calc(var(--field-card-w) * 1.4 + 10px);
   background:
     linear-gradient(90deg, rgba(255,216,74,.085), transparent 18%, transparent 84%, rgba(255,216,74,.025)),
     rgba(0,0,0,.045);
@@ -308,11 +327,11 @@ body {
 .zone-hand .zone-cards,
 .zone-hiddenHand .zone-cards {
   flex-wrap: nowrap;
-  min-height: 208px;
+  min-height: calc(var(--hand-card-w) * 1.4 + 18px);
   overflow-x: auto;
   overflow-y: hidden;
   align-items: flex-start;
-  padding: 14px 6px 16px;
+  padding: 9px 5px 11px;
   background:
     linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015)),
     rgba(6,12,14,.34);
@@ -322,20 +341,26 @@ body {
 .side-stacks {
   grid-area: stacks;
   display: grid;
-  gap: 8px;
-  align-content: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  align-content: stretch;
+  min-height: 0;
+  overflow: hidden;
 }
 .stack-zone {
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .stack-cards {
-  min-height: 72px;
+  min-height: calc(var(--stack-card-w) * 1.4 + 12px);
+  max-height: 100%;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   align-content: flex-start;
   justify-content: flex-end;
-  padding: 8px;
+  padding: 6px;
   border-radius: 10px;
   background:
     linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,.008)),
@@ -343,17 +368,17 @@ body {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
 }
 .stack-life .stack-cards {
-  min-height: 98px;
+  min-height: calc(var(--stack-card-w) * 1.4 + 16px);
   background:
     linear-gradient(180deg, rgba(255,107,107,.08), rgba(255,255,255,.01)),
     rgba(0,0,0,.075);
 }
 .stack-deck .stack-cards {
-  min-height: 80px;
+  min-height: calc(var(--stack-card-w) * 1.4 + 12px);
   align-items: center;
 }
 .stack-removal .stack-cards {
-  min-height: 74px;
+  min-height: calc(var(--stack-card-w) * 1.4 + 12px);
   background:
     linear-gradient(180deg, rgba(176,123,255,.08), rgba(255,255,255,.01)),
     rgba(0,0,0,.075);
@@ -368,11 +393,11 @@ body {
   cursor: default; transition: transform .1s ease, border-color .1s ease, box-shadow .1s ease, filter .1s ease;
   box-shadow: 0 8px 18px rgba(0,0,0,.22);
 }
-.card-field { width: 88px; aspect-ratio: 5 / 7; }
-.card-hand { width: clamp(122px, 9vw, 160px); aspect-ratio: 5 / 7; }
+.card-field { width: var(--field-card-w); aspect-ratio: 5 / 7; }
+.card-hand { width: var(--hand-card-w); aspect-ratio: 5 / 7; }
 .stack-cards .card-field,
 .card.facedown.mini {
-  width: 48px;
+  width: var(--stack-card-w);
 }
 .stack-cards .field-chip {
   display: none;
@@ -400,7 +425,7 @@ body {
 .card.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(125,183,255,.9), 0 14px 30px rgba(0,0,0,.32); }
 .card.resting { opacity: .62; transform: rotate(4deg); }
 .card.facedown {
-  width: 88px; aspect-ratio: 5 / 7;
+  width: var(--field-card-w); aspect-ratio: 5 / 7;
   background:
     linear-gradient(135deg, rgba(125,183,255,.16), rgba(255,216,74,.1)),
     repeating-linear-gradient(45deg, #16241f, #16241f 6px, #21362f 6px, #21362f 12px);
@@ -409,7 +434,7 @@ body {
 }
 .card.facedown.stack-card {
   position: relative;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 .card.facedown.stack-card::before,
 .card.facedown.stack-card::after {
@@ -424,10 +449,10 @@ body {
   z-index: -1;
 }
 .card.facedown.stack-card::before {
-  transform: translate(5px, 4px);
+  transform: translate(4px, 3px);
 }
 .card.facedown.stack-card::after {
-  transform: translate(10px, 8px);
+  transform: translate(8px, 6px);
   opacity: .75;
 }
 .card-art {
@@ -497,7 +522,7 @@ body {
   position: sticky;
   top: 0;
   align-self: start;
-  max-height: calc(100vh - 120px);
+  max-height: 100%;
   overflow: auto;
   background: linear-gradient(180deg, rgba(25,34,42,.78), rgba(12,19,22,.72));
   border: 1px solid var(--line);
@@ -506,7 +531,7 @@ body {
   backdrop-filter: blur(18px);
 }
 .inspector.empty {
-  min-height: 260px;
+  min-height: 180px;
   display: grid;
   place-items: center;
   color: var(--muted);
@@ -517,7 +542,7 @@ body {
     linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)),
     rgba(0,0,0,.18);
   border-bottom: 1px solid var(--line);
-  padding: 10px;
+  padding: 8px;
 }
 .inspect-media img {
   display: block;
@@ -526,7 +551,7 @@ body {
   box-shadow: 0 12px 30px rgba(0,0,0,.28);
 }
 .image-missing {
-  min-height: 260px;
+  min-height: 180px;
   display: grid;
   place-items: center;
   border: 1px dashed var(--line);
@@ -534,7 +559,7 @@ body {
   color: var(--muted);
 }
 .inspect-body {
-  padding: 12px;
+  padding: 10px;
 }
 .inspect-title {
   display: flex;
@@ -580,13 +605,13 @@ body {
 
 .midline {
   position: sticky;
-  top: 10px;
+  top: 0;
   z-index: 5;
-  display: flex; justify-content: center; min-height: 46px; align-items: center;
+  display: flex; justify-content: center; min-height: 38px; align-items: center;
   pointer-events: none;
 }
 .actions {
-  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 8px;
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 6px;
   background: rgba(6,12,14,.54);
   border: 1px solid rgba(255,255,255,.1);
   border-radius: 999px;
@@ -612,7 +637,7 @@ body {
 }
 .actions button {
   background: linear-gradient(180deg, #9ac8ff, #6fa9ef); color: #06122e; border: 0; border-radius: 999px;
-  padding: 8px 14px; font-weight: 600; cursor: pointer;
+  padding: 6px 11px; font-weight: 600; cursor: pointer;
   box-shadow: 0 8px 18px rgba(39,106,185,.18);
 }
 .actions button:hover { filter: brightness(1.08); }
@@ -623,20 +648,64 @@ body {
 }
 
 .logbar {
-  display: flex; gap: 14px; padding: 9px 18px; border-top: 1px solid var(--line);
+  display: flex; gap: 14px; padding: 6px 14px; border-top: 1px solid var(--line);
   color: var(--muted); font-size: 12px; overflow-x: auto; white-space: nowrap;
   background: rgba(7,12,15,.88);
 }
 .logline::before { content: "• "; color: var(--accent); }
 
-@media (max-width: 980px) {
-  .board { grid-template-columns: 1fr; }
+@media (max-width: 980px), (max-height: 720px) {
+  .app {
+    --field-card-w: clamp(44px, min(6.8vw, 6.8vh), 66px);
+    --hand-card-w: clamp(62px, min(10.5vw, 10vh), 100px);
+    --stack-card-w: clamp(26px, min(4.8vw, 4.6vh), 38px);
+  }
+  .meta { gap: 9px; font-size: 12px; }
+  .topbar { gap: 8px; }
+  .board {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr) minmax(160px, .7fr);
+    overflow: auto;
+  }
   .board > .side,
   .board > .midline,
   .inspector { grid-column: 1; }
-  .board::before { right: 18px; }
+  .board::before { right: 12px; }
+  .side {
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 26%);
+    grid-template-areas:
+      "head ap"
+      "front stacks"
+      "energy stacks"
+      "hand hand";
+  }
+  .ap-strip { justify-self: end; }
+  .stack-cards { justify-content: flex-start; }
+  .inspector {
+    grid-row: auto;
+    position: static;
+    max-height: 46vh;
+  }
+}
+
+@media (max-width: 680px) {
+  .topbar { align-items: flex-start; }
+  .brand { width: 100%; }
+  .meta {
+    width: 100%;
+    gap: 7px 10px;
+  }
+  .meta .turn-on,
+  .meta .turn-off {
+    flex-basis: 100%;
+  }
+  .top-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
   .side {
     grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto auto auto;
     grid-template-areas:
       "head"
       "ap"
@@ -644,15 +713,26 @@ body {
       "energy"
       "hand"
       "stacks";
+    overflow: visible;
   }
-  .ap-strip { justify-self: stretch; }
-  .side-stacks {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .side-head { flex-wrap: wrap; }
+  .ap-strip { justify-self: stretch; justify-content: space-between; }
+  .ap-pip {
+    width: 24px;
+    height: 24px;
   }
-  .stack-cards { justify-content: flex-start; }
-  .inspector {
-    grid-row: auto;
-    position: static;
-    max-height: none;
+  .actions {
+    max-width: calc(100vw - 24px);
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    border-radius: 10px;
   }
+  .actions button {
+    white-space: nowrap;
+    padding-inline: 9px;
+    font-size: 12px;
+  }
+  .side-stacks { grid-template-columns: repeat(4, minmax(86px, 1fr)); overflow-x: auto; }
+  .board { overflow: auto; }
 }

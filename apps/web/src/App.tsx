@@ -407,14 +407,14 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           {canUseTurnActions && !raidSource && !awaitingMulligans && (
             <div className="actions">
               <button onClick={() => act(() => send({ type: "advancePhase", seat: me }))}>
-                Advance Phase →
+                Next Phase
               </button>
               <button onClick={() => act(() => send({ type: "endTurn", seat: me }))}>
                 End Turn
               </button>
               {state.phase === "start" && (
                 <button onClick={() => act(() => send({ type: "extraDraw", seat: me }))}>
-                  Extra Draw (1 AP)
+                  Draw (1 AP)
                 </button>
               )}
               {selected && state.phase === "main" && (
