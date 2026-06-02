@@ -589,7 +589,7 @@ function PlayerSide(props: {
   );
 
   return (
-    <section className={`side ${who}`}>
+    <section className={`side ${who} ${flip ? "opponent-side" : "player-side"}`}>
       <div className="side-head">
         <h2>{label} <span className="tag">{who}</span></h2>
         <div className="counts">

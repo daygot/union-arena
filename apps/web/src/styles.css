@@ -32,8 +32,8 @@ body {
 }
 
 .app {
-  --field-card-w: clamp(48px, min(5.2vw, 7.2vh), 74px);
-  --hand-card-w: clamp(72px, min(7.4vw, 10.6vh), 112px);
+  --field-card-w: clamp(56px, min(6vw, 8.8vh), 90px);
+  --hand-card-w: clamp(90px, min(9vw, 13.2vh), 140px);
   --stack-card-w: clamp(30px, min(3.4vw, 5vh), 42px);
   display: flex;
   flex-direction: column;
@@ -131,7 +131,7 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, .95fr) auto auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, .9fr) auto 112px minmax(0, 1fr);
   gap: 6px;
   position: relative;
   padding: 10px 12px;
@@ -159,7 +159,7 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(174px, 20%);
-  grid-template-rows: auto minmax(0, .9fr) minmax(0, .7fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, .85fr) minmax(0, .6fr) minmax(0, 1.1fr);
   grid-template-areas:
     "head ap"
     "front stacks"
@@ -168,6 +168,14 @@ body {
   gap: 5px 10px;
   padding: 0;
   overflow: hidden;
+}
+.player-side {
+  grid-template-rows: auto minmax(0, 1.15fr) minmax(0, .8fr) minmax(0, .65fr);
+  grid-template-areas:
+    "head ap"
+    "hand hand"
+    "front stacks"
+    "energy stacks";
 }
 .side.p1,
 .side.p2 { box-shadow: none; }
@@ -320,6 +328,12 @@ body {
 .zone-energy .zone-cards {
   align-items: center;
   padding-inline: 9px;
+}
+.zone-hand .zone-cards {
+  justify-content: center;
+}
+.opponent-side .zone-hiddenHand .zone-cards {
+  justify-content: center;
 }
 .zone-front .zone-cards {
   background:
@@ -546,8 +560,9 @@ body {
 
 .inspector {
   align-self: stretch;
-  min-height: 82px;
-  max-height: 128px;
+  height: 112px;
+  min-height: 112px;
+  max-height: 112px;
   overflow: hidden;
   display: grid;
   grid-template-columns: 78px minmax(0, 1fr);
@@ -559,7 +574,8 @@ body {
 }
 .inspector.empty {
   grid-template-columns: 1fr;
-  min-height: 54px;
+  height: 112px;
+  min-height: 112px;
   display: grid;
   place-items: center;
   color: var(--muted);
@@ -582,7 +598,7 @@ body {
   box-shadow: 0 12px 30px rgba(0,0,0,.28);
 }
 .image-missing {
-  min-height: 70px;
+  min-height: 98px;
   height: 100%;
   display: grid;
   place-items: center;
@@ -698,8 +714,8 @@ body {
 
 @media (max-width: 980px), (max-height: 720px) {
   .app {
-    --field-card-w: clamp(44px, min(6.8vw, 6.8vh), 66px);
-    --hand-card-w: clamp(62px, min(10.5vw, 10vh), 100px);
+    --field-card-w: clamp(48px, min(7.2vw, 7.6vh), 74px);
+    --hand-card-w: clamp(72px, min(11.5vw, 11vh), 112px);
     --stack-card-w: clamp(26px, min(4.8vw, 4.6vh), 38px);
   }
   .meta { gap: 9px; font-size: 12px; }
@@ -716,10 +732,19 @@ body {
       "energy stacks"
       "hand hand";
   }
+  .player-side {
+    grid-template-areas:
+      "head ap"
+      "hand hand"
+      "front stacks"
+      "energy stacks";
+  }
   .ap-strip { justify-self: end; }
   .stack-cards { justify-content: flex-start; }
   .inspector {
-    max-height: 112px;
+    height: 104px;
+    min-height: 104px;
+    max-height: 104px;
   }
 }
 
@@ -750,6 +775,15 @@ body {
       "stacks";
     overflow: visible;
   }
+  .player-side {
+    grid-template-areas:
+      "head"
+      "ap"
+      "hand"
+      "front"
+      "energy"
+      "stacks";
+  }
   .side-head {
     flex-wrap: wrap;
     gap: 6px;
@@ -779,7 +813,9 @@ body {
   }
   .inspector {
     grid-template-columns: 58px minmax(0, 1fr);
-    max-height: 122px;
+    height: 112px;
+    min-height: 112px;
+    max-height: 112px;
   }
   .inspect-grid {
     grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
