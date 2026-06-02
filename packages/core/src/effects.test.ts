@@ -192,6 +192,24 @@ describe("activate ability", () => {
     expect(s2.players.p1.sideline).toContain(source);
   });
 
+  it("sidelines an end-of-main character when ending the turn directly from main phase", () => {
+    const g = game();
+    const source = place(g, "p1", "energyLine", "TEMP_ENERGY");
+
+    const s1 = must(applyIntent(g, {
+      type: "activateAbility",
+      seat: "p1",
+      iid: source,
+      effectId: "energy_generation_eot_and_sideline_on_activate",
+    }));
+    expect(s1.instances[source]!.sidelineAtEndOfMain).toBe(true);
+
+    // End the turn directly from main phase (without stepping into attack).
+    const s2 = must(applyIntent(s1, { type: "endTurn", seat: "p1" }));
+    expect(s2.players.p1.energyLine).not.toContain(source);
+    expect(s2.players.p1.sideline).toContain(source);
+  });
+
   it("recognizes temporary energy generation from text when effect ids are stale", () => {
     reg(def({
       id: "TEMP_ENERGY_TEXT_ONLY",

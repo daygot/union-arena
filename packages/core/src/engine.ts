@@ -544,8 +544,11 @@ function handleEndTurn(state: GameState, seat: Seat): ApplyResult {
   if (state.pendingAttack) return err("Resolve the current attack before ending turn.");
   if (state.pendingTriggers) return err("Resolve pending triggers before ending turn.");
 
-  let s: GameState = state.phase === "end" ? state : { ...state, phase: "end" };
-  if (state.phase !== "end") {
+  // Leaving the main phase (directly to end) must still fire end-of-main
+  // effects, e.g. "sideline this character at the end of your main phase".
+  let s: GameState = state.phase === "main" ? runEndOfMainPhaseEffects(state) : state;
+  if (s.phase !== "end") {
+    s = { ...s, phase: "end" };
     s = log(s, { kind: "phase", phase: "end", seat, turn: s.turn });
   }
   s = runEndPhase(s);
