@@ -37,6 +37,9 @@ body {
   --hidden-hand-card-w: clamp(44px, min(4.2vw, 6.2vh), 68px);
   --stack-card-w: clamp(30px, min(3vw, 4.6vh), 42px);
   --row-gap: clamp(8px, 1vw, 14px);
+  --field-row-h: calc(var(--field-card-w) * 1.4 + 16px);
+  --hand-row-h: calc(var(--hand-card-w) * 1.4 + 18px);
+  --hidden-hand-row-h: calc(var(--hidden-hand-card-w) * 1.4 + 12px);
   --line-width: calc(var(--field-card-w) * 4 + var(--row-gap) * 3 + 24px);
   display: flex;
   flex-direction: column;
@@ -134,11 +137,11 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: max-content auto max-content;
+  grid-template-rows: minmax(0, .92fr) auto minmax(0, 1.08fr);
   gap: 8px;
   position: relative;
   padding: 10px max(14px, calc((100vw - 1440px) / 2));
-  overflow: auto;
+  overflow: hidden;
   background:
     radial-gradient(1100px 600px at 44% 45%, rgba(44,102,82,.44), transparent 72%),
     linear-gradient(90deg, rgba(255,255,255,.035), transparent 18%, transparent 82%, rgba(255,255,255,.025)),
@@ -162,18 +165,19 @@ body {
   justify-self: center;
   display: grid;
   grid-template-columns: minmax(var(--line-width), 1fr) minmax(144px, 170px);
-  grid-template-rows: auto max-content max-content auto;
+  grid-template-rows: auto minmax(0, var(--field-row-h)) minmax(0, var(--field-row-h)) minmax(0, var(--hidden-hand-row-h));
   grid-template-areas:
     "head ap"
+    "hand stacks"
     "front stacks"
-    "energy stacks"
-    "hand stacks";
+    "energy stacks";
   gap: 6px 12px;
   padding: 0;
-  overflow: visible;
+  min-height: 0;
+  overflow: hidden;
 }
 .player-side {
-  grid-template-rows: auto max-content max-content max-content;
+  grid-template-rows: auto minmax(0, var(--field-row-h)) minmax(0, var(--field-row-h)) minmax(0, var(--hand-row-h));
   grid-template-areas:
     "head ap"
     "front stacks"
@@ -318,7 +322,8 @@ body {
   margin: 0 0 3px 2px;
 }
 .zone-cards {
-  display: flex; gap: var(--row-gap); flex-wrap: wrap; min-height: calc(var(--field-card-w) * 1.4 + 20px);
+  display: flex; gap: var(--row-gap); flex-wrap: wrap; min-height: 0;
+  height: 100%;
   background:
     linear-gradient(180deg, rgba(0,0,0,.1), rgba(255,255,255,.015)),
     rgba(0,0,0,.045);
@@ -335,6 +340,7 @@ body {
   justify-content: center;
   gap: var(--row-gap);
   width: min(100%, var(--line-width));
+  min-height: 0;
   margin-inline: auto;
   padding-inline: 12px;
 }
@@ -350,7 +356,6 @@ body {
     rgba(0,0,0,.055);
 }
 .zone-energy .zone-cards {
-  min-height: calc(var(--field-card-w) * 1.4 + 18px);
   background:
     linear-gradient(90deg, rgba(255,216,74,.085), transparent 18%, transparent 84%, rgba(255,216,74,.025)),
     rgba(0,0,0,.045);
@@ -376,7 +381,7 @@ body {
 .zone-hand .zone-cards,
 .zone-hiddenHand .zone-cards {
   flex-wrap: nowrap;
-  min-height: calc(var(--hand-card-w) * 1.4 + 18px);
+  min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
   align-items: flex-start;
@@ -388,7 +393,7 @@ body {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 18px 42px rgba(0,0,0,.16);
 }
 .opponent-side .zone-hiddenHand .zone-cards {
-  min-height: calc(var(--hidden-hand-card-w) * 1.4 + 10px);
+  min-height: 0;
   justify-content: center;
   padding-block: 6px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
@@ -589,8 +594,8 @@ body {
 }
 
 .inspector {
-  min-height: 96px;
-  max-height: 172px;
+  min-height: 92px;
+  max-height: min(172px, 22vh);
   width: min(680px, 56vw);
   overflow: hidden;
   display: grid;
@@ -638,7 +643,10 @@ body {
 .inspect-body {
   padding: 7px 10px;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .inspect-title {
   display: flex;
@@ -688,7 +696,8 @@ body {
   overflow: auto;
   font-size: 12px;
   line-height: 1.34;
-  max-height: 64px;
+  min-height: 0;
+  max-height: none;
 }
 
 .midline {
@@ -698,7 +707,7 @@ body {
   display: grid;
   grid-template-columns: minmax(180px, auto) minmax(320px, 1fr);
   gap: 12px;
-  min-height: 96px;
+  min-height: 0;
   align-items: center;
   pointer-events: none;
 }
@@ -752,24 +761,30 @@ body {
 
 @media (max-width: 980px), (max-height: 820px) {
   .app {
-    --field-card-w: clamp(62px, min(12vw, 10vh), 92px);
-    --hand-card-w: clamp(74px, min(16vw, 11vh), 110px);
-    --hidden-hand-card-w: clamp(34px, min(8vw, 5.2vh), 52px);
-    --stack-card-w: clamp(26px, min(4.8vw, 4.6vh), 38px);
+    --field-card-w: clamp(62px, min(11.5vw, 8.8vh), 86px);
+    --hand-card-w: clamp(72px, min(15vw, 9.8vh), 98px);
+    --hidden-hand-card-w: clamp(28px, min(7vw, 4.4vh), 44px);
+    --stack-card-w: clamp(24px, min(4.6vw, 4vh), 34px);
+    --row-gap: clamp(6px, .8vw, 10px);
+    --field-row-h: calc(var(--field-card-w) * 1.4 + 10px);
+    --hand-row-h: calc(var(--hand-card-w) * 1.4 + 12px);
+    --hidden-hand-row-h: calc(var(--hidden-hand-card-w) * 1.4 + 8px);
   }
   .meta { gap: 9px; font-size: 12px; }
   .topbar { gap: 8px; }
   .board {
-    grid-template-rows: max-content auto max-content;
-    overflow: auto;
+    grid-template-rows: minmax(0, .9fr) auto minmax(0, 1.1fr);
+    gap: 5px;
+    overflow: hidden;
+    padding-block: 6px;
   }
   .side {
     grid-template-columns: minmax(0, 1fr) minmax(140px, 24%);
     grid-template-areas:
       "head ap"
+      "hand stacks"
       "front stacks"
-      "energy stacks"
-      "hand stacks";
+      "energy stacks";
   }
   .player-side {
     grid-template-areas:
@@ -779,12 +794,40 @@ body {
       "hand hand";
   }
   .ap-strip { justify-self: end; }
+  .zone-label {
+    height: 15px;
+    margin-bottom: 1px;
+    font-size: 9px;
+  }
+  .zone-front .zone-cards,
+  .zone-energy .zone-cards {
+    padding-block: 5px;
+  }
+  .zone-hand .zone-cards,
+  .zone-hiddenHand .zone-cards {
+    padding-block: 6px;
+  }
   .stack-cards { justify-content: flex-start; }
   .inspector {
-    min-height: 96px;
-    max-height: 150px;
+    min-height: 86px;
+    max-height: min(132px, 19vh);
+    grid-template-columns: 66px minmax(0, 1fr);
   }
-  .inspect-text { max-height: 48px; }
+  .inspector.empty {
+    height: 86px;
+    min-height: 86px;
+  }
+  .inspect-tags { display: none; }
+  .inspect-grid { gap: 3px 7px; }
+  .midline {
+    gap: 8px;
+  }
+  .actions {
+    padding: 5px;
+  }
+  .actions button {
+    padding: 5px 9px;
+  }
 }
 
 @media (max-width: 680px) {
@@ -804,7 +847,7 @@ body {
   }
   .side {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto auto auto;
+    grid-template-rows: auto auto var(--hidden-hand-row-h) var(--field-row-h) var(--field-row-h) minmax(0, 74px);
     grid-template-areas:
       "head"
       "ap"
@@ -812,9 +855,10 @@ body {
       "front"
       "energy"
       "stacks";
-    overflow: visible;
+    overflow: hidden;
   }
   .player-side {
+    grid-template-rows: auto auto var(--field-row-h) var(--field-row-h) var(--hand-row-h) minmax(0, 74px);
     grid-template-areas:
       "head"
       "ap"
@@ -851,7 +895,7 @@ body {
   .side-stacks { grid-template-columns: repeat(4, minmax(86px, 1fr)); overflow-x: auto; }
   .board {
     grid-template-rows: auto auto auto;
-    overflow: auto;
+    overflow: hidden;
     padding-inline: 10px;
   }
   .midline {
