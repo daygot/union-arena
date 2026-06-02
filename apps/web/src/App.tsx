@@ -779,10 +779,12 @@ function Card(props: {
         </div>
       )}
       {variant === "field" && (
-        <div className="field-chip">
-          <span>{def.name}</span>
-          {def.bp != null && <b>{def.bp + (inst.bpModifier ?? 0)}</b>}
-        </div>
+        <>
+          {def.bp != null && <div className="field-bp-badge">BP {def.bp + (inst.bpModifier ?? 0)}</div>}
+          <div className="field-chip">
+            <span>{def.name}</span>
+          </div>
+        </>
       )}
       {variant === "hand" && (
         <div className="hand-chip">
@@ -811,7 +813,7 @@ function CardInspector(props: { def: CardDef | null }) {
   }
 
   return (
-    <aside className="inspector">
+    <aside className={`inspector ${def.text ? "has-text" : ""}`}>
       <div className="inspect-media">
         {def.imageUrl ? (
           <img src={def.imageUrl} alt={`${def.id} ${def.name}`} />

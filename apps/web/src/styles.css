@@ -134,11 +134,11 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, .82fr) auto minmax(0, 1.18fr);
+  grid-template-rows: max-content auto max-content;
   gap: 8px;
   position: relative;
   padding: 10px max(14px, calc((100vw - 1440px) / 2));
-  overflow: hidden;
+  overflow: auto;
   background:
     radial-gradient(1100px 600px at 44% 45%, rgba(44,102,82,.44), transparent 72%),
     linear-gradient(90deg, rgba(255,255,255,.035), transparent 18%, transparent 82%, rgba(255,255,255,.025)),
@@ -160,21 +160,20 @@ body {
 .side {
   width: min(100%, 1160px);
   justify-self: center;
-  min-height: 0;
   display: grid;
   grid-template-columns: minmax(var(--line-width), 1fr) minmax(144px, 170px);
-  grid-template-rows: auto minmax(0, .36fr) minmax(0, 1fr) minmax(0, .7fr);
+  grid-template-rows: auto max-content max-content auto;
   grid-template-areas:
     "head ap"
-    "hand stacks"
     "front stacks"
-    "energy stacks";
+    "energy stacks"
+    "hand stacks";
   gap: 6px 12px;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 .player-side {
-  grid-template-rows: auto minmax(0, 1fr) minmax(0, .72fr) minmax(0, .92fr);
+  grid-template-rows: auto max-content max-content max-content;
   grid-template-areas:
     "head ap"
     "front stacks"
@@ -319,7 +318,7 @@ body {
   margin: 0 0 3px 2px;
 }
 .zone-cards {
-  display: flex; gap: var(--row-gap); flex-wrap: wrap; min-height: calc(var(--field-card-w) * 1.4 + 18px);
+  display: flex; gap: var(--row-gap); flex-wrap: wrap; min-height: calc(var(--field-card-w) * 1.4 + 20px);
   background:
     linear-gradient(180deg, rgba(0,0,0,.1), rgba(255,255,255,.015)),
     rgba(0,0,0,.045);
@@ -389,9 +388,10 @@ body {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 18px 42px rgba(0,0,0,.16);
 }
 .opponent-side .zone-hiddenHand .zone-cards {
-  min-height: calc(var(--hidden-hand-card-w) * 1.4 + 12px);
+  min-height: calc(var(--hidden-hand-card-w) * 1.4 + 10px);
   justify-content: center;
-  padding-block: 7px;
+  padding-block: 6px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
 }
 .opponent-side .zone-hiddenHand .card.facedown {
   width: var(--hidden-hand-card-w);
@@ -547,6 +547,22 @@ body {
   background: linear-gradient(180deg, rgba(8,11,18,0), rgba(7,12,14,.85) 38%, rgba(7,12,14,.96));
   color: var(--text);
 }
+.field-bp-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 2;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(7,12,14,.86);
+  border: 1px solid rgba(255,216,74,.62);
+  color: var(--warn);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 5px 14px rgba(0,0,0,.24);
+}
 .field-chip {
   display: grid;
   gap: 2px;
@@ -557,10 +573,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.field-chip b {
-  color: var(--warn);
-  font-size: 10px;
 }
 .hand-chip {
   display: flex;
@@ -577,13 +589,12 @@ body {
 }
 
 .inspector {
-  height: 94px;
-  min-height: 94px;
-  max-height: 94px;
-  width: min(520px, 42vw);
+  min-height: 96px;
+  max-height: 172px;
+  width: min(680px, 56vw);
   overflow: hidden;
   display: grid;
-  grid-template-columns: 66px minmax(0, 1fr);
+  grid-template-columns: 78px minmax(0, 1fr);
   background: linear-gradient(180deg, rgba(25,34,42,.78), rgba(12,19,22,.72));
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -674,29 +685,25 @@ body {
 .inspect-text {
   margin: 5px 0 0;
   color: var(--text);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow: auto;
   font-size: 12px;
-  line-height: 1.28;
+  line-height: 1.34;
+  max-height: 64px;
 }
 
 .midline {
-  position: sticky;
-  top: 0;
   z-index: 5;
   width: min(100%, 1160px);
   justify-self: center;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto;
+  grid-template-columns: minmax(180px, auto) minmax(320px, 1fr);
   gap: 12px;
-  min-height: 94px;
+  min-height: 96px;
   align-items: center;
   pointer-events: none;
 }
 .actions {
-  justify-self: end;
+  justify-self: center;
   display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 6px;
   background: rgba(6,12,14,.54);
   border: 1px solid rgba(255,255,255,.1);
@@ -743,26 +750,26 @@ body {
 }
 .logline::before { content: "• "; color: var(--accent); }
 
-@media (max-width: 980px), (max-height: 720px) {
+@media (max-width: 980px), (max-height: 820px) {
   .app {
-    --field-card-w: clamp(58px, min(12vw, 9vh), 86px);
-    --hand-card-w: clamp(72px, min(16vw, 10.4vh), 106px);
+    --field-card-w: clamp(62px, min(12vw, 10vh), 92px);
+    --hand-card-w: clamp(74px, min(16vw, 11vh), 110px);
     --hidden-hand-card-w: clamp(34px, min(8vw, 5.2vh), 52px);
     --stack-card-w: clamp(26px, min(4.8vw, 4.6vh), 38px);
   }
   .meta { gap: 9px; font-size: 12px; }
   .topbar { gap: 8px; }
   .board {
-    grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr);
+    grid-template-rows: max-content auto max-content;
     overflow: auto;
   }
   .side {
     grid-template-columns: minmax(0, 1fr) minmax(140px, 24%);
     grid-template-areas:
       "head ap"
-      "hand stacks"
       "front stacks"
-      "energy stacks";
+      "energy stacks"
+      "hand stacks";
   }
   .player-side {
     grid-template-areas:
@@ -774,10 +781,10 @@ body {
   .ap-strip { justify-self: end; }
   .stack-cards { justify-content: flex-start; }
   .inspector {
-    height: 94px;
-    min-height: 94px;
-    max-height: 94px;
+    min-height: 96px;
+    max-height: 150px;
   }
+  .inspect-text { max-height: 48px; }
 }
 
 @media (max-width: 680px) {
