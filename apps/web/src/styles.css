@@ -332,6 +332,24 @@ body {
     linear-gradient(90deg, rgba(255,216,74,.085), transparent 18%, transparent 84%, rgba(255,216,74,.025)),
     rgba(0,0,0,.045);
 }
+.zone-drop.can-drop .zone-cards {
+  outline: 2px dashed rgba(125,183,255,.62);
+  outline-offset: -4px;
+  box-shadow:
+    inset 0 0 0 1px rgba(125,183,255,.2),
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 0 22px rgba(125,183,255,.12);
+}
+.zone-front.can-drop .zone-cards {
+  background:
+    linear-gradient(90deg, rgba(125,183,255,.16), transparent 16%, transparent 84%, rgba(125,183,255,.08)),
+    rgba(0,0,0,.055);
+}
+.zone-energy.can-drop .zone-cards {
+  background:
+    linear-gradient(90deg, rgba(255,216,74,.18), transparent 18%, transparent 84%, rgba(255,216,74,.08)),
+    rgba(0,0,0,.045);
+}
 .zone-hand .zone-cards,
 .zone-hiddenHand .zone-cards {
   flex-wrap: nowrap;
@@ -428,6 +446,8 @@ body {
   letter-spacing: .8px;
 }
 .card.can { cursor: pointer; }
+.card.can-drag { cursor: grab; }
+.card.can-drag:active { cursor: grabbing; }
 .card.can:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 13px 26px rgba(0,0,0,.28); }
 .card:not(.can):hover { border-color: rgba(91,140,255,.45); }
 .card.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(125,183,255,.9), 0 14px 30px rgba(0,0,0,.32); }

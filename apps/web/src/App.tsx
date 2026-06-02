@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type DragEvent, type FormEvent, useState } from "react";
 import type { CardDef, CardInstance, Color, GameState, Seat } from "@union-arena/core";
 import { EFFECTS, playerTurnNumber } from "@union-arena/core";
 import { useGoldfishGame } from "./staticDemo.js";
@@ -140,6 +140,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
   const [raidSource, setRaidSource] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [previewIid, setPreviewIid] = useState<string | null>(null);
+  const [draggedIid, setDraggedIid] = useState<string | null>(null);
 
   if (!connected) return <Center>{error ?? "Connecting to server..."}</Center>;
   if (!state || seat == null) return <Center>Joining room “{roomId}”…</Center>;
@@ -250,6 +251,35 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
     return selected != null && canSelect(selected);
   };
 
+  const canDrag = (iid: string): boolean => {
+    if (seat === "spectator" || !canUseTurnActions || !canSelect(iid)) return false;
+    const p = state.players[me];
+    if (state.phase === "main") return p.hand.includes(iid);
+    if (state.phase === "movement") return p.frontLine.includes(iid) || p.energyLine.includes(iid);
+    return false;
+  };
+
+  const canDropTo = (target: "frontLine" | "energyLine", iid = draggedIid): boolean => {
+    if (!iid || seat === "spectator" || !canUseTurnActions) return false;
+    const p = state.players[me];
+    if (state.phase === "main") return p.hand.includes(iid) && canPayForCard(state, me, def(iid));
+    if (state.phase !== "movement") return false;
+    if (target === "frontLine") return p.energyLine.includes(iid);
+    return p.frontLine.includes(iid);
+  };
+
+  const dropTo = (target: "frontLine" | "energyLine", iid: string) => {
+    if (!canDropTo(target, iid)) return;
+    const p = state.players[me];
+    if (state.phase === "main" && p.hand.includes(iid)) {
+      act(() => send({ type: "playCard", seat: me, iid, to: target }));
+      return;
+    }
+    if (state.phase === "movement" && (p.frontLine.includes(iid) || p.energyLine.includes(iid))) {
+      act(() => send({ type: "move", seat: me, iid, to: target }));
+    }
+  };
+
   const resolveTrigger = (activate: boolean) => {
     if (seat === "spectator" || !triggerIid || !triggerDef) return;
     const base = { type: "resolveTrigger" as const, seat, iid: triggerIid, activate };
@@ -332,6 +362,11 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           selected={selected}
           onSelect={setSelected}
           onPreview={setPreviewIid}
+          canDrag={canDrag}
+          onDragStart={setDraggedIid}
+          onDragEnd={() => setDraggedIid(null)}
+          canDropTo={() => false}
+          onDropTo={() => {}}
           flip
         />
 
@@ -483,6 +518,11 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           selected={selected}
           onSelect={setSelected}
           onPreview={setPreviewIid}
+          canDrag={canDrag}
+          onDragStart={setDraggedIid}
+          onDragEnd={() => setDraggedIid(null)}
+          canDropTo={(target) => canDropTo(target)}
+          onDropTo={(target, iid) => dropTo(target, iid)}
         />
       </main>
 
@@ -505,25 +545,44 @@ function PlayerSide(props: {
   selected: string | null;
   onSelect: (iid: string) => void;
   onPreview: (iid: string | null) => void;
+  canDrag: (iid: string) => boolean;
+  onDragStart: (iid: string) => void;
+  onDragEnd: () => void;
+  canDropTo: (target: "frontLine" | "energyLine") => boolean;
+  onDropTo: (target: "frontLine" | "energyLine", iid: string) => void;
   flip?: boolean;
 }) {
-  const { label, who, state, def, viewer, canSelect, selected, onSelect, onPreview, flip } = props;
+  const { label, who, state, def, viewer, canSelect, selected, onSelect, onPreview, canDrag, onDragStart, onDragEnd, canDropTo, onDropTo, flip } = props;
   const p = state.players[who];
   const energy = energyPool(state, who);
   const zones = (
     <>
-      <Zone name={`Front Line (${p.frontLine.length}/4)`} kind="front">
+      <Zone
+        name={`Front Line (${p.frontLine.length}/4)`}
+        kind="front"
+        dropTarget="frontLine"
+        canDrop={canDropTo("frontLine")}
+        onDropTo={onDropTo}
+      >
         {p.frontLine.map((iid) => (
           <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
             variant="field"
-            selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
+            selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
+            onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
         ))}
       </Zone>
-      <Zone name={`Energy Line (${p.energyLine.length}/4) · ${energySummary(energy)}`} kind="energy">
+      <Zone
+        name={`Energy Line (${p.energyLine.length}/4) · ${energySummary(energy)}`}
+        kind="energy"
+        dropTarget="energyLine"
+        canDrop={canDropTo("energyLine")}
+        onDropTo={onDropTo}
+      >
         {p.energyLine.map((iid) => (
           <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
             variant="field"
-            selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
+            selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
+            onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
         ))}
       </Zone>
     </>
@@ -551,7 +610,8 @@ function PlayerSide(props: {
               <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
                 variant="hand"
                 unplayable={viewer === who && state.phase === "main" && !canPayForCard(state, who, def(iid))}
-                selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
+                selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
+                onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
             ))}
       </Zone>
       <div className="side-stacks">
@@ -561,7 +621,8 @@ function PlayerSide(props: {
             return inst.faceUp ? (
               <Card key={iid} iid={iid} inst={inst} def={def(iid)}
                 variant="field"
-                selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
+                selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
+                onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
             ) : (
               <button key={iid} type="button" className="card facedown mini" aria-label="Face-down life card" />
             );
@@ -574,14 +635,16 @@ function PlayerSide(props: {
           {p.removal.map((iid) => (
             <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
               variant="field"
-              selectable={false} selected={false} onSelect={onSelect} onPreview={onPreview} />
+              selectable={false} selected={false} draggable={false}
+              onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
           ))}
         </StackZone>
         <StackZone name="Sideline" count={p.sideline.length} kind="sideline">
           {p.sideline.map((iid) => (
             <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
               variant="field"
-              selectable={canSelect(iid)} selected={selected === iid} onSelect={onSelect} onPreview={onPreview} />
+              selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
+              onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
           ))}
         </StackZone>
       </div>
@@ -632,11 +695,31 @@ function EnergyStrip(props: { pool: Record<Color, number> }) {
   );
 }
 
-function Zone(props: { name: string; children: React.ReactNode; kind?: "front" | "energy" | "hand" | "hiddenHand" | "sideline" }) {
+function Zone(props: {
+  name: string;
+  children: React.ReactNode;
+  kind?: "front" | "energy" | "hand" | "hiddenHand" | "sideline";
+  dropTarget?: "frontLine" | "energyLine";
+  canDrop?: boolean;
+  onDropTo?: (target: "frontLine" | "energyLine", iid: string) => void;
+}) {
+  const onDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!props.dropTarget || !props.canDrop) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const onDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (!props.dropTarget || !props.canDrop || !props.onDropTo) return;
+    event.preventDefault();
+    const iid = event.dataTransfer.getData("text/plain");
+    if (iid) props.onDropTo(props.dropTarget, iid);
+  };
+
   return (
-    <div className={`zone ${props.kind ? `zone-${props.kind}` : ""}`}>
+    <div className={`zone ${props.kind ? `zone-${props.kind}` : ""} ${props.dropTarget ? "zone-drop" : ""} ${props.canDrop ? "can-drop" : ""}`}>
       <div className="zone-label">{props.name}</div>
-      <div className="zone-cards">{props.children}</div>
+      <div className="zone-cards" onDragOver={onDragOver} onDrop={onDrop}>{props.children}</div>
     </div>
   );
 }
@@ -658,19 +741,30 @@ function Card(props: {
   unplayable?: boolean;
   selectable: boolean;
   selected: boolean;
+  draggable: boolean;
   onSelect: (iid: string) => void;
   onPreview: (iid: string | null) => void;
+  onDragStart: (iid: string) => void;
+  onDragEnd: () => void;
 }) {
-  const { iid, inst, def, variant, unplayable, selectable, selected, onSelect, onPreview } = props;
+  const { iid, inst, def, variant, unplayable, selectable, selected, draggable, onSelect, onPreview, onDragStart, onDragEnd } = props;
   return (
     <button
       type="button"
-      className={`card card-${variant} ${selected ? "sel" : ""} ${inst.orientation} ${selectable ? "can" : ""} ${unplayable ? "unplayable" : ""}`}
+      className={`card card-${variant} ${selected ? "sel" : ""} ${inst.orientation} ${selectable ? "can" : ""} ${draggable ? "can-drag" : ""} ${unplayable ? "unplayable" : ""}`}
       aria-disabled={!selectable}
+      draggable={draggable}
       onClick={() => selectable && onSelect(iid)}
       onFocus={() => onPreview(iid)}
       onMouseEnter={() => onPreview(iid)}
       onMouseLeave={() => onPreview(null)}
+      onDragStart={(event) => {
+        if (!draggable) return;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", iid);
+        onDragStart(iid);
+      }}
+      onDragEnd={onDragEnd}
       title={def.text}
     >
       {def.imageUrl ? (
