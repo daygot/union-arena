@@ -79,7 +79,8 @@ function ddText(root: HTMLElement, colClass: string): string {
   return (dd?.text ?? "").replace(/\s+/g, " ").trim();
 }
 
-function classifyType(raw: string): RawCard["type"] {
+function classifyType(raw: string, cardNumber: string, name: string): RawCard["type"] {
+  if (/\bAP\d*\b/i.test(cardNumber) || /^action point card\b/i.test(name)) return "ap";
   const t = raw.toLowerCase();
   if (t.includes("character")) return "character";
   if (t.includes("event")) return "event";
@@ -169,7 +170,7 @@ export function parseDetail(html: string, ctx: ParseDetailContext): RawCard {
     setName,
     name,
     rarity,
-    type: classifyType(typeText),
+    type: classifyType(typeText, numberPart, name),
     color,
     requiredEnergy,
     apCost: apText ? Number(apText) : 0,

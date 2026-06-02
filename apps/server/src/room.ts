@@ -21,9 +21,11 @@ export class GameRoom {
   private state: GameState;
   private clients = new Map<Seat, Seated>();
   private spectators = new Set<(msg: unknown) => void>();
+  private readonly loaded: LoadedCards;
 
   constructor(id: string, loaded: LoadedCards, seed = Date.now() & 0x7fffffff) {
     this.id = id;
+    this.loaded = loaded;
     __resetIidCounter();
     const deck = demoDeck(loaded);
     this.state = createGame({
@@ -54,6 +56,7 @@ export class GameRoom {
   submit(seat: Seat | "spectator", intent: Intent): string | null {
     if (seat === "spectator") return "Spectators cannot act.";
     if (intent.seat !== seat) return "You can only act for your own seat.";
+    this.state = this.withFreshDefs(this.state);
     if (this.awaitingMulligans() && intent.type !== "mulligan") {
       return "Both players must finish mulligan decisions before the game starts.";
     }
@@ -77,13 +80,26 @@ export class GameRoom {
   }
 
   getState(): GameState {
+    this.state = this.withFreshDefs(this.state);
     return this.state;
   }
 
   broadcast(): void {
+    this.state = this.withFreshDefs(this.state);
     const msg = { type: "state", state: this.state };
     for (const c of this.clients.values()) c.send(msg);
     for (const s of this.spectators) s(msg);
+  }
+
+  private withFreshDefs(state: GameState): GameState {
+    let changed = false;
+    const defs: GameState["defs"] = {};
+    for (const [defId, def] of Object.entries(state.defs)) {
+      const fresh = this.loaded.defs[defId] ?? this.loaded.defs[def.cardNumber];
+      defs[defId] = fresh ?? def;
+      if (fresh && fresh !== def) changed = true;
+    }
+    return changed ? { ...state, defs } : state;
   }
 }
 

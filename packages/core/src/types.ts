@@ -96,6 +96,10 @@ export interface CardInstance {
   faceUp: boolean;
   /** Temporary BP delta (e.g. +3000 from an active trigger), cleared at end of turn. */
   bpModifier?: number;
+  /** Temporary energy generation, cleared at end of turn. */
+  energyModifier?: EnergySpec[];
+  /** Some effects sideline their source at the end of the main phase. */
+  sidelineAtEndOfMain?: boolean;
 }
 
 export type ZoneId =

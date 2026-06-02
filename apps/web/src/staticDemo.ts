@@ -57,6 +57,8 @@ const DEMO_DEFS: Record<string, CardDef> = {
     cardNumber: "SMD-1-002",
     name: "Piisuke",
     bp: 1000,
+    energyGeneration: [{ color: "yellow", amount: 2 }],
+    effectIds: ["energy_generation_eot_and_sideline_on_activate"],
     text: "This character gains energy generation and \"At the end of the main phase, sideline this character\" until the end of the turn.",
     imageUrl: "https://www.unionarena-tcg.com/na/images/cardlist/card/UE19BT_SMD-1-002.png?v3",
   }),

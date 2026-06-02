@@ -4,8 +4,9 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { toCardDef, RawCardSchema } from "@union-arena/card-data";
+import { canonicalPlayableCards, toCardDef, RawCardSchema } from "@union-arena/card-data";
 import type { CardDef } from "@union-arena/core";
+import type { RawCard } from "@union-arena/card-data";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -46,18 +47,22 @@ export function loadCards(imageBaseUrl = `http://localhost:${process.env.PORT ??
   const setFiles = existsSync(SETS_DIR)
     ? readdirSync(SETS_DIR).filter((file) => file.endsWith(".json")).sort()
     : [];
+  const rawCards: RawCard[] = [];
   for (const file of setFiles) {
     const p = resolve(SETS_DIR, file);
     if (!existsSync(p)) continue;
     const json = JSON.parse(readFileSync(p, "utf8"));
     for (const rawJson of json.cards ?? []) {
-      const raw = RawCardSchema.parse(rawJson);
-      const def = toCardDef(raw);
-      if (raw.localImage) def.imageUrl = `${imageBaseUrl}/${encodeURIComponent(raw.localImage)}`;
-      defs[def.cardNumber] = def;
-      if (def.type === "character" || def.type === "site" || def.type === "event") {
-        playable.push(def.cardNumber);
-      }
+      rawCards.push(RawCardSchema.parse(rawJson));
+    }
+  }
+
+  for (const raw of canonicalPlayableCards(rawCards)) {
+    const def = toCardDef(raw);
+    if (raw.localImage) def.imageUrl = `${imageBaseUrl}/${encodeURIComponent(raw.localImage)}`;
+    defs[def.cardNumber] = def;
+    if (def.type === "character" || def.type === "site" || def.type === "event") {
+      playable.push(def.cardNumber);
     }
   }
 

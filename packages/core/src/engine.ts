@@ -24,7 +24,7 @@ import {
   withPlayer,
 } from "./helpers.js";
 import { resolveTriggerEffect } from "./triggers.js";
-import { runEffects, runEffect, effectsFor } from "./effects.js";
+import { runEffects, runEffect, effectsFor, resolvedEffectIds } from "./effects.js";
 import { performRaid } from "./raid.js";
 
 const PHASE_ORDER: Phase[] = ["start", "movement", "main", "attack", "end"];
@@ -269,7 +269,9 @@ function handleRaid(
   const raid = performRaid(s, { seat, raidIid: iid, targetIid });
   if (!raid.ok) return raid;
   const to = raid.state.players[seat].frontLine.includes(iid) ? "frontLine" : "energyLine";
-  return ok(log(raid.state, { kind: "play", seat, iid, to }, { kind: "info", message: `${def.name} raided.` }));
+  const fx = runEffects(raid.state, iid, "onPlay", {});
+  if (!fx.ok) return fx;
+  return ok(log(fx.state, { kind: "play", seat, iid, to }, { kind: "info", message: `${def.name} raided.` }));
 }
 
 function handleActivateAbility(
@@ -279,13 +281,14 @@ function handleActivateAbility(
   effectId: string,
 ): ApplyResult {
   if (seat !== state.activeSeat) return err("Not your turn.");
+  if (state.phase !== "main") return err("Can only activate abilities during main phase.");
   const inst = getInst(state, iid);
   if (inst.controller !== seat) return err("You don't control that card.");
   const p = state.players[seat];
   if (!p.frontLine.includes(iid) && !p.energyLine.includes(iid))
     return err("Card must be on your field to activate.");
   const def = getDef(state, iid);
-  if (!def.effectIds.includes(effectId))
+  if (!resolvedEffectIds(def).includes(effectId))
     return err("That card has no such ability.");
   // Only `activate`-typed effects can be triggered this way.
   const available = effectsFor(state, iid, "activate");
@@ -403,7 +406,8 @@ function resolveBattle(state: GameState, attackerIid: string, defenderIid: strin
   s = log(s, { kind: "battle", attackerIid, defenderIid, winnerIid });
 
   // Impact: even if blocked, damage still goes through to the player.
-  if (aDef.keywords.includes("impact")) {
+  const dDef = getDef(state, defenderIid);
+  if (aDef.keywords.includes("impact") && !dDef.effectIds.includes("nullify_impact")) {
     return resolveDirectDamage(s, attackerIid, lifeIids);
   }
   return ok(s);
@@ -520,7 +524,8 @@ function handleAdvancePhase(state: GameState, seat: Seat): ApplyResult {
   const idx = PHASE_ORDER.indexOf(state.phase);
   if (idx < PHASE_ORDER.length - 1) {
     const nextPhase = PHASE_ORDER[idx + 1]!;
-    let s: GameState = { ...state, phase: nextPhase };
+    let s: GameState = state.phase === "main" ? runEndOfMainPhaseEffects(state) : state;
+    s = { ...s, phase: nextPhase };
     s = log(s, { kind: "phase", phase: nextPhase, seat, turn: s.turn });
     return ok(s);
   }
@@ -551,6 +556,17 @@ function handleEndTurn(state: GameState, seat: Seat): ApplyResult {
   return ok(s);
 }
 
+function runEndOfMainPhaseEffects(state: GameState): GameState {
+  let s = state;
+  const seat = state.activeSeat;
+  for (const iid of [...s.players[seat].frontLine, ...s.players[seat].energyLine]) {
+    if (s.instances[iid]?.sidelineAtEndOfMain) {
+      s = sideline(s, iid);
+    }
+  }
+  return s;
+}
+
 /** End phase: refresh resting chars/sites to active, discard hand to 8. */
 function runEndPhase(state: GameState): GameState {
   const seat = state.activeSeat;
@@ -563,8 +579,14 @@ function runEndPhase(state: GameState): GameState {
   }
   // Clear "until end of turn" BP modifiers on all characters (both players).
   for (const iid of Object.keys(s.instances)) {
-    if (s.instances[iid]!.bpModifier) {
-      s = withInstance(s, iid, (i) => ({ ...i, bpModifier: 0 }));
+    const inst = s.instances[iid]!;
+    if (inst.bpModifier || inst.energyModifier?.length || inst.sidelineAtEndOfMain) {
+      s = withInstance(s, iid, (i) => ({
+        ...i,
+        bpModifier: 0,
+        energyModifier: [],
+        sidelineAtEndOfMain: false,
+      }));
     }
   }
   // Hand size limit 8: extras to removal (oldest kept arbitrarily = keep first 8).

@@ -50,6 +50,17 @@ describe("parseDetail", () => {
     expect(raw.apCost).toBe(1);
   });
 
+  it("classifies action point collectibles as AP cards", () => {
+    const apHtml = fix("detail_smd-1-001.html")
+      .replaceAll("UE19BT/SMD-1-001", "UE19BT/SMD-1-AP01")
+      .replaceAll("Obiguro", "Action Point Card(SAKAMOTO DAYS)");
+    const ap = parseDetail(apHtml, {
+      imageBaseUrl: "https://www.unionarena-tcg.com",
+    });
+
+    expect(ap.type).toBe("ap");
+  });
+
   it("parses generated energy with color + amount", () => {
     expect(raw.generatedEnergy).toEqual([{ color: "yellow", amount: 1 }]);
   });
@@ -82,5 +93,67 @@ describe("toCardDef mapping", () => {
     expect(def.effectIds).toContain("buff_other_3000_eot_on_sideline");
     expect(typeof def.text).toBe("string");
     expect(def.text.length).toBeGreaterThan(0);
+  });
+
+  it("maps common gameplay text to timed effect ids", () => {
+    const base = parseDetail(fix("detail_smd-1-001.html"), {
+      imageBaseUrl: "https://www.unionarena-tcg.com",
+    });
+
+    expect(
+      toCardDef({
+        ...base,
+        type: "event",
+        effectText: "Draw two cards. Your opponent reveals all the cards in their hand.",
+        effectTiming: "",
+      }).effectIds,
+    ).toContain("draw_two_cards_on_use");
+
+    expect(
+      toCardDef({
+        ...base,
+        effectText: "Choose up to one character on your opponent's front line and switch it to resting. It will remain set to resting the next time it would be switched to active.",
+        effectTiming: "When Played",
+      }).effectIds,
+    ).toContain("rest_opponent_front_on_play");
+
+    expect(
+      toCardDef({
+        ...base,
+        type: "event",
+        effectText: "Choose one character with {3000 or less BP} on your opponent's front line and sideline it.",
+        effectTiming: "",
+      }).effectIds,
+    ).toContain("sideline_opponent_front_3000_or_less_on_use");
+
+    expect(
+      toCardDef({
+        ...base,
+        type: "event",
+        effectText: "Look at the top five cards of your deck. Reveal up to two [The Order] affinity cards and add them to your hand. Place the remaining cards on the bottom of your deck in any order.",
+        effectTiming: "",
+      }).effectIds,
+    ).toContain("search_top_5_add_one_on_use");
+  });
+
+  it("maps rest-for-temporary-energy text variants comprehensively", () => {
+    const base = parseDetail(fix("detail_smd-1-001.html"), {
+      imageBaseUrl: "https://www.unionarena-tcg.com",
+    });
+    const variants = [
+      "This character gains energy generation until the end of the turn. At the end of the main phase, sideline this character.",
+      "This character gains energy generation and \"At the end of the main phase, sideline this character\" until the end of the turn.",
+      "This card is also treated as <Muzan Kibutsuji>. This character gains energy generation until the end of the turn. At the end of the main phase, sideline this character.",
+    ];
+
+    for (const effectText of variants) {
+      expect(
+        toCardDef({
+          ...base,
+          effectText,
+          effectTiming: "Activate: Main",
+        }).effectIds,
+      ).toContain("energy_generation_eot_and_sideline_on_activate");
+    }
   });
 });

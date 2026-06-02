@@ -1,12 +1,29 @@
 import { type DragEvent, type FormEvent, useState } from "react";
 import type { CardDef, CardInstance, Color, GameState, Seat } from "@union-arena/core";
-import { EFFECTS, playerTurnNumber } from "@union-arena/core";
+import { EFFECTS, activeApCount, energyPool, playerTurnNumber } from "@union-arena/core";
 import { useGoldfishGame } from "./staticDemo.js";
 import { useGame } from "./useGame.js";
 
 /** Activatable (manual) ability ids on a card, for UI buttons. */
 function activatableEffects(def: CardDef): string[] {
-  return def.effectIds.filter((id) => EFFECTS[id]?.when === "activate");
+  const ids = [...def.effectIds];
+  if (
+    isTemporaryEnergyGenerationText(def.text) &&
+    !ids.includes("energy_generation_eot_and_sideline_on_activate")
+  ) {
+    ids.push("energy_generation_eot_and_sideline_on_activate");
+  }
+  return ids.filter((id) => EFFECTS[id]?.when === "activate");
+}
+
+function isTemporaryEnergyGenerationText(text: string): boolean {
+  const normalized = text
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+  return /this character gains energy generation and "at the end of the main phase, sideline this character" until the end of the turn\.?/i.test(
+    normalized,
+  );
 }
 
 function currentRoomId(): string | null {
@@ -41,10 +58,6 @@ function roomUrl(roomId: string): string {
   return url.toString();
 }
 
-function activeApCount(state: GameState, seat: Seat): number {
-  return state.players[seat].ap.filter((iid) => state.instances[iid]?.orientation === "active").length;
-}
-
 function hasRequiredEnergy(state: GameState, seat: Seat, card: CardDef): boolean {
   const pool = energyPool(state, seat);
   return card.requiredEnergy.every((energy) => pool[energy.color] >= energy.amount);
@@ -52,19 +65,77 @@ function hasRequiredEnergy(state: GameState, seat: Seat, card: CardDef): boolean
 
 const COLORS: Color[] = ["red", "blue", "green", "yellow", "purple"];
 
-function energyPool(state: GameState, seat: Seat): Record<Color, number> {
-  const pool: Record<Color, number> = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
-  for (const iid of state.players[seat].energyLine) {
-    const def = state.defs[state.instances[iid]!.defId]!;
-    for (const energy of def.energyGeneration) {
-      pool[energy.color] += energy.amount;
-    }
-  }
-  return pool;
-}
-
 function canPayForCard(state: GameState, seat: Seat, card: CardDef): boolean {
   return activeApCount(state, seat) >= card.apCost && hasRequiredEnergy(state, seat, card);
+}
+
+function effectButtonLabel(effectId: string): string {
+  switch (effectId) {
+    case "energy_generation_eot_and_sideline_on_activate":
+      return "Rest: Gain Energy";
+    case "rest_opponent_front_activate":
+      return "Rest Opponent";
+    case "debuff_opponent_front_1000_eot_activate":
+      return "-1000 BP";
+    case "buff_self_1000_eot":
+      return "+1000 BP";
+    case "buff_self_2000_eot":
+      return "+2000 BP";
+    case "buff_self_3000_eot":
+      return "+3000 BP";
+    case "buff_other_1000_eot":
+      return "Ally +1000 BP";
+    case "buff_other_2000_eot":
+      return "Ally +2000 BP";
+    default:
+      return EFFECTS[effectId]?.text ?? effectId;
+  }
+}
+
+function activationDisabledReason(
+  state: GameState,
+  iid: string,
+  effectId: string,
+  options: { myTurn: boolean; canUseTurnActions: boolean; awaitingMulligans: boolean },
+): string | null {
+  if (options.awaitingMulligans) {
+    return "Finish mulligans before activating abilities.";
+  }
+  if (!options.myTurn) {
+    return "Activate abilities can only be used on your turn.";
+  }
+  if (!options.canUseTurnActions) {
+    return "Resolve the current prompt before activating abilities.";
+  }
+  if (state.phase !== "main") {
+    return "Activate: Main abilities can only be used during main phase.";
+  }
+  if (
+    effectId === "energy_generation_eot_and_sideline_on_activate" &&
+    state.instances[iid]?.orientation !== "active"
+  ) {
+    return "This card must be active to rest for energy.";
+  }
+  return null;
+}
+
+function cardZone(state: GameState, seat: Seat, iid: string): string {
+  const p = state.players[seat];
+  if (p.frontLine.includes(iid)) return "front line";
+  if (p.energyLine.includes(iid)) return "energy line";
+  if (p.hand.includes(iid)) return "hand";
+  if (p.life.includes(iid)) return "life";
+  if (p.sideline.includes(iid)) return "sideline";
+  if (p.removal.includes(iid)) return "removal";
+  if (p.deck.includes(iid)) return "deck";
+  if (p.ap.includes(iid)) return "AP";
+  return "opponent/unknown";
+}
+
+function cardActionStatus(state: GameState, seat: Seat, iid: string, effectIds: string[]): string {
+  const inst = state.instances[iid];
+  const actions = effectIds.map(effectButtonLabel).join(", ") || "none";
+  return `${cardZone(state, seat, iid)} · ${inst?.orientation ?? "unknown"} · phase ${state.phase} · actions ${actions}`;
 }
 
 export function App() {
@@ -164,6 +235,37 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
   const def = (iid: string): CardDef => state.defs[state.instances[iid]!.defId]!;
   const inspectedIid = selected ?? previewIid;
   const inspectedDef = inspectedIid ? def(inspectedIid) : null;
+  const inspectedActivatableEffects = inspectedDef ? activatableEffects(inspectedDef) : [];
+  const inspectedOnMyField =
+    inspectedIid != null &&
+    (state.players[me].frontLine.includes(inspectedIid) || state.players[me].energyLine.includes(inspectedIid));
+  const activationButtonsFor = (iid: string, compact = false) => {
+    const effects = activatableEffects(def(iid));
+    if (effects.length === 0) return null;
+    return effects.map((eid) => {
+      const disabledReason = activationDisabledReason(state, iid, eid, {
+        myTurn,
+        canUseTurnActions,
+        awaitingMulligans,
+      });
+      return (
+        <button
+          key={eid}
+          className={compact ? "field-action-button" : undefined}
+          disabled={disabledReason != null}
+          title={disabledReason ?? EFFECTS[eid]?.text}
+          onClick={() => act(() => send({ type: "activateAbility", seat: me, iid, effectId: eid }))}
+        >
+          {effectButtonLabel(eid)}
+        </button>
+      );
+    });
+  };
+  const inspectedActivationButtons =
+    inspectedIid && inspectedOnMyField ? activationButtonsFor(inspectedIid) : null;
+  const inspectedStatus = inspectedIid
+    ? cardActionStatus(state, me, inspectedIid, inspectedActivatableEffects)
+    : null;
 
   const act = (fn: () => void) => {
     fn();
@@ -216,9 +318,9 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
     }
 
     if (!canUseTurnActions) return false;
+    if (p.frontLine.includes(iid) || p.energyLine.includes(iid)) return true;
     if (state.phase === "main") {
       if (p.hand.includes(iid)) return canPayForCard(state, seat, def(iid));
-      return p.frontLine.includes(iid) || p.energyLine.includes(iid);
     }
     if (state.phase === "attack") {
       return p.frontLine.includes(iid) && inst.orientation === "active";
@@ -227,6 +329,13 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
       return isMine(iid) && (p.frontLine.includes(iid) || p.energyLine.includes(iid));
     }
     return false;
+  };
+
+  const canClickCard = (iid: string): boolean => {
+    if (canSelect(iid)) return true;
+    if (seat === "spectator" || state.winner) return false;
+    const p = state.players[seat];
+    return isMine(iid) && (p.frontLine.includes(iid) || p.energyLine.includes(iid));
   };
 
   const selectedCanBlock =
@@ -388,10 +497,11 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           state={state}
           def={def}
           viewer={seat}
-          canSelect={canSelect}
+          canSelect={canClickCard}
           selected={selected}
           onSelect={setSelected}
           onPreview={setPreviewIid}
+          fieldActions={() => null}
           canDrag={canDrag}
           onDragStart={setDraggedIid}
           onDragEnd={() => setDraggedIid(null)}
@@ -485,6 +595,12 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
             </div>
           )}
 
+          {inspectedActivationButtons && (
+            <div className="actions selected-actions">
+              {inspectedActivationButtons}
+            </div>
+          )}
+
           {canUseTurnActions && !raidSource && !awaitingMulligans && (
             <div className="actions">
               <button onClick={() => act(() => send({ type: "advancePhase", seat: me }))}>
@@ -531,27 +647,18 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
                   )}
                 </>
               )}
-              {selected && state.phase === "attack" && (
+              {selected &&
+                state.phase === "attack" &&
+                state.players[me].frontLine.includes(selected) &&
+                state.instances[selected]!.orientation === "active" && (
                 <button onClick={() => act(() => send({ type: "declareAttack", seat: me, attackerIid: selected }))}>
                   Attack with selected
                 </button>
               )}
-              {selected &&
-                (state.players[me].frontLine.includes(selected) ||
-                  state.players[me].energyLine.includes(selected)) &&
-                activatableEffects(def(selected)).map((eid) => (
-                  <button
-                    key={eid}
-                    title={EFFECTS[eid]?.text}
-                    onClick={() => act(() => send({ type: "activateAbility", seat: me, iid: selected, effectId: eid }))}
-                  >
-                    Activate: {eid}
-                  </button>
-                ))}
             </div>
           )}
 
-          <CardInspector def={inspectedDef} />
+          <CardInspector def={inspectedDef} status={inspectedStatus} actions={inspectedActivationButtons} />
         </div>
 
         <PlayerSide
@@ -560,10 +667,11 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           state={state}
           def={def}
           viewer={seat}
-          canSelect={canSelect}
+          canSelect={canClickCard}
           selected={selected}
           onSelect={setSelected}
           onPreview={setPreviewIid}
+          fieldActions={(iid) => activationButtonsFor(iid, true)}
           canDrag={canDrag}
           onDragStart={setDraggedIid}
           onDragEnd={() => setDraggedIid(null)}
@@ -594,6 +702,7 @@ function PlayerSide(props: {
   selected: string | null;
   onSelect: (iid: string) => void;
   onPreview: (iid: string | null) => void;
+  fieldActions: (iid: string) => React.ReactNode;
   canDrag: (iid: string) => boolean;
   onDragStart: (iid: string) => void;
   onDragEnd: () => void;
@@ -614,6 +723,7 @@ function PlayerSide(props: {
     selected,
     onSelect,
     onPreview,
+    fieldActions,
     canDrag,
     onDragStart,
     onDragEnd,
@@ -636,10 +746,12 @@ function PlayerSide(props: {
         onDropTo={onDropTo}
       >
         {p.frontLine.map((iid) => (
-          <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
-            variant="field"
-            selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
-            onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+          <FieldCardSlot key={iid} actions={fieldActions(iid)}>
+            <Card iid={iid} inst={state.instances[iid]!} def={def(iid)}
+              variant="field"
+              selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
+              onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+          </FieldCardSlot>
         ))}
       </Zone>
       <Zone
@@ -650,10 +762,12 @@ function PlayerSide(props: {
         onDropTo={onDropTo}
       >
         {p.energyLine.map((iid) => (
-          <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
-            variant="field"
-            selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
-            onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+          <FieldCardSlot key={iid} actions={fieldActions(iid)}>
+            <Card iid={iid} inst={state.instances[iid]!} def={def(iid)}
+              variant="field"
+              selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
+              onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+          </FieldCardSlot>
         ))}
       </Zone>
     </>
@@ -816,6 +930,15 @@ function StackZone(props: { name: string; count: number; kind: "life" | "deck" |
   );
 }
 
+function FieldCardSlot(props: { children: React.ReactNode; actions: React.ReactNode }) {
+  return (
+    <div className="field-card-slot">
+      {props.children}
+      {props.actions && <div className="field-card-actions">{props.actions}</div>}
+    </div>
+  );
+}
+
 function Card(props: {
   iid: string;
   inst: CardInstance;
@@ -837,7 +960,10 @@ function Card(props: {
       className={`card card-${variant} ${selected ? "sel" : ""} ${inst.orientation} ${selectable ? "can" : ""} ${draggable ? "can-drag" : ""} ${unplayable ? "unplayable" : ""}`}
       aria-disabled={!selectable}
       draggable={draggable}
-      onClick={() => selectable && onSelect(iid)}
+      onClick={() => {
+        onPreview(iid);
+        if (selectable) onSelect(iid);
+      }}
       onFocus={() => onPreview(iid)}
       onMouseEnter={() => onPreview(iid)}
       onMouseLeave={() => onPreview(null)}
@@ -885,8 +1011,8 @@ function energyText(spec: CardDef["requiredEnergy"]): string {
   return spec.map((e) => `${e.amount} ${e.color}`).join(", ");
 }
 
-function CardInspector(props: { def: CardDef | null }) {
-  const { def } = props;
+function CardInspector(props: { def: CardDef | null; status?: string | null; actions?: React.ReactNode }) {
+  const { def, status, actions } = props;
   if (!def) return null;
 
   return (
@@ -918,6 +1044,8 @@ function CardInspector(props: { def: CardDef | null }) {
           </div>
         )}
         {def.text && <p className="inspect-text">{def.text}</p>}
+        {status && <div className="inspect-status">{status}</div>}
+        {actions && <div className="inspect-actions">{actions}</div>}
       </div>
     </aside>
   );

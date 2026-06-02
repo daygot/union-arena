@@ -53,7 +53,12 @@ export function energyPool(state: GameState, seat: Seat): Record<Color, number> 
   };
   for (const iid of state.players[seat].energyLine) {
     const def = getDef(state, iid);
+    const inst = getInst(state, iid);
     for (const e of def.energyGeneration) pool[e.color] += e.amount;
+    for (const e of inst.energyModifier ?? []) pool[e.color] += e.amount;
+    if (def.effectIds.includes("energy_generation_if_active") && inst.orientation === "active") {
+      pool[def.color] += 1;
+    }
   }
   return pool;
 }
