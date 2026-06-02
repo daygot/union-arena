@@ -264,14 +264,29 @@ describe("attack phase: combat", () => {
       p2: { life: ["SMALL", "SMALL", "SMALL"] },
     });
     const atk = g.players.p1.frontLine[0]!;
+    const targetLife = g.players.p2.life[1]!;
     g = must(applyIntent(g, { type: "declareAttack", seat: "p1", attackerIid: atk }));
-    g = must(applyIntent(g, { type: "declareBlock", seat: "p2" })); // no blocker
+    g = must(applyIntent(g, { type: "declareBlock", seat: "p2", lifeIids: [targetLife] })); // no blocker
     expect(g.pendingTriggers?.seat).toBe("p2");
     expect(g.pendingTriggers?.iids.length).toBe(1);
     const revealed = g.pendingTriggers!.iids[0]!;
+    expect(revealed).toBe(targetLife);
     g = must(applyIntent(g, { type: "resolveTrigger", seat: "p2", iid: revealed, activate: false }));
     expect(g.players.p2.life.length).toBe(2);
+    expect(g.players.p2.life).not.toContain(targetLife);
     expect(g.players.p2.sideline).toContain(revealed);
+  });
+
+  it("requires the defender to choose a life card when damage goes through", () => {
+    let g = fixture({
+      phase: "attack",
+      p1: { frontLine: ["SMALL"] },
+      p2: { life: ["SMALL", "SMALL"] },
+    });
+    const atk = g.players.p1.frontLine[0]!;
+    g = must(applyIntent(g, { type: "declareAttack", seat: "p1", attackerIid: atk }));
+    const r = applyIntent(g, { type: "declareBlock", seat: "p2" });
+    expect(r.ok).toBe(false);
   });
 
   it("Impact pushes damage through even when blocked", () => {
@@ -282,11 +297,13 @@ describe("attack phase: combat", () => {
     });
     const atk = g.players.p1.frontLine[0]!;
     const blk = g.players.p2.frontLine[0]!;
+    const targetLife = g.players.p2.life[1]!;
     g = must(applyIntent(g, { type: "declareAttack", seat: "p1", attackerIid: atk }));
-    g = must(applyIntent(g, { type: "declareBlock", seat: "p2", blockerIid: blk }));
+    g = must(applyIntent(g, { type: "declareBlock", seat: "p2", blockerIid: blk, lifeIids: [targetLife] }));
     // attacker lost the battle (1000 < 3000) but Impact still deals damage -> pending triggers
     expect(g.pendingTriggers?.seat).toBe("p2");
     expect(g.pendingTriggers?.iids.length).toBe(1);
+    expect(g.pendingTriggers?.iids[0]).toBe(targetLife);
   });
 
   it("Snipe attacks a front-line character and cannot be blocked", () => {
@@ -309,8 +326,9 @@ describe("attack phase: combat", () => {
       p2: { life: ["SMALL"] }, // only 1 life
     });
     const atk = g.players.p1.frontLine[0]!;
+    const targetLife = g.players.p2.life[0]!;
     g = must(applyIntent(g, { type: "declareAttack", seat: "p1", attackerIid: atk }));
-    g = must(applyIntent(g, { type: "declareBlock", seat: "p2" }));
+    g = must(applyIntent(g, { type: "declareBlock", seat: "p2", lifeIids: [targetLife] }));
     const revealed = g.pendingTriggers!.iids[0]!;
     g = must(applyIntent(g, { type: "resolveTrigger", seat: "p2", iid: revealed, activate: false }));
     expect(g.winner).toBe("p1");

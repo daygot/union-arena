@@ -169,7 +169,7 @@ export type Intent =
   | { type: "useEvent"; seat: Seat; iid: string }
   | { type: "activateAbility"; seat: Seat; iid: string; effectId: string }
   | { type: "declareAttack"; seat: Seat; attackerIid: string; targetIid?: string }
-  | { type: "declareBlock"; seat: Seat; blockerIid?: string }
+  | { type: "declareBlock"; seat: Seat; blockerIid?: string; lifeIids?: string[] }
   | {
       type: "resolveTrigger";
       seat: Seat;

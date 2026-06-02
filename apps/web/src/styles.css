@@ -39,7 +39,7 @@ body {
   --row-gap: clamp(8px, 1vw, 14px);
   --field-row-h: calc(var(--field-card-w) * 1.4 + 16px);
   --hand-row-h: calc(var(--hand-card-w) * 1.4 + 18px);
-  --hidden-hand-row-h: calc(var(--hidden-hand-card-w) * 1.4 + 12px);
+  --hidden-hand-row-h: calc(var(--hidden-hand-card-w) * 1.4 + 26px);
   --line-width: calc(var(--field-card-w) * 4 + var(--row-gap) * 3 + 24px);
   display: flex;
   flex-direction: column;
@@ -405,6 +405,11 @@ body {
   grid-area: stacks;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    "life deck"
+    "life removal"
+    "life sideline";
   gap: 6px;
   align-content: stretch;
   min-height: 0;
@@ -416,7 +421,8 @@ body {
   overflow: hidden;
 }
 .stack-cards {
-  min-height: calc(var(--stack-card-w) * 1.4 + 12px);
+  min-height: 0;
+  height: 100%;
   max-height: 100%;
   display: flex;
   flex-wrap: wrap;
@@ -431,20 +437,24 @@ body {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
 }
 .stack-life .stack-cards {
-  min-height: calc(var(--stack-card-w) * 1.4 + 16px);
   background:
     linear-gradient(180deg, rgba(255,107,107,.08), rgba(255,255,255,.01)),
     rgba(0,0,0,.075);
 }
 .stack-deck .stack-cards {
-  min-height: calc(var(--stack-card-w) * 1.4 + 12px);
   align-items: center;
 }
 .stack-removal .stack-cards {
-  min-height: calc(var(--stack-card-w) * 1.4 + 12px);
   background:
     linear-gradient(180deg, rgba(176,123,255,.08), rgba(255,255,255,.01)),
     rgba(0,0,0,.075);
+}
+.stack-life { grid-area: life; }
+.stack-deck { grid-area: deck; }
+.stack-removal { grid-area: removal; }
+.stack-sideline { grid-area: sideline; }
+.stack-life .stack-cards {
+  justify-content: flex-start;
 }
 
 .card {
@@ -705,7 +715,7 @@ body {
   width: min(100%, 1160px);
   justify-self: center;
   display: grid;
-  grid-template-columns: minmax(180px, auto) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-height: 0;
   align-items: center;
@@ -722,6 +732,11 @@ body {
   pointer-events: auto;
 }
 .midline .inspector {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 12;
+  transform: translate(-50%, -50%);
   pointer-events: auto;
 }
 .actions.prompt {
@@ -768,7 +783,7 @@ body {
     --row-gap: clamp(6px, .8vw, 10px);
     --field-row-h: calc(var(--field-card-w) * 1.4 + 10px);
     --hand-row-h: calc(var(--hand-card-w) * 1.4 + 12px);
-    --hidden-hand-row-h: calc(var(--hidden-hand-card-w) * 1.4 + 8px);
+    --hidden-hand-row-h: calc(var(--hidden-hand-card-w) * 1.4 + 20px);
   }
   .meta { gap: 9px; font-size: 12px; }
   .topbar { gap: 8px; }
@@ -893,6 +908,10 @@ body {
     font-size: 12px;
   }
   .side-stacks { grid-template-columns: repeat(4, minmax(86px, 1fr)); overflow-x: auto; }
+  .side-stacks {
+    grid-template-rows: 1fr;
+    grid-template-areas: "life deck removal sideline";
+  }
   .board {
     grid-template-rows: auto auto auto;
     overflow: hidden;

@@ -53,7 +53,7 @@ export function applyIntent(state: GameState, intent: Intent): ApplyResult {
     case "declareAttack":
       return handleDeclareAttack(state, intent.seat, intent.attackerIid, intent.targetIid);
     case "declareBlock":
-      return handleDeclareBlock(state, intent.seat, intent.blockerIid);
+      return handleDeclareBlock(state, intent.seat, intent.blockerIid, intent.lifeIids);
     case "resolveTrigger":
       return handleResolveTrigger(state, intent);
     case "advancePhase":
@@ -352,7 +352,7 @@ function handleDeclareAttack(
   return ok(fx.state);
 }
 
-function handleDeclareBlock(state: GameState, seat: Seat, blockerIid?: string): ApplyResult {
+function handleDeclareBlock(state: GameState, seat: Seat, blockerIid?: string, lifeIids?: string[]): ApplyResult {
   const pa = state.pendingAttack;
   if (!pa) return err("No attack to block.");
   const defender = opponentOf(state.activeSeat);
@@ -361,7 +361,7 @@ function handleDeclareBlock(state: GameState, seat: Seat, blockerIid?: string): 
   // Snipe: target can't block; resolve as a character battle vs the sniped target.
   if (pa.targetIid !== undefined) {
     if (blockerIid) return err("Sniped attacks cannot be blocked.");
-    return resolveBattle(state, pa.attackerIid, pa.targetIid);
+    return resolveBattle(state, pa.attackerIid, pa.targetIid, lifeIids);
   }
 
   if (blockerIid) {
@@ -374,15 +374,15 @@ function handleDeclareBlock(state: GameState, seat: Seat, blockerIid?: string): 
     // Fire on-block abilities (e.g. conditional BP gain) while pendingAttack is set.
     const fx = runEffects(s, blockerIid, "onBlock", {});
     if (!fx.ok) return fx;
-    return resolveBattle(fx.state, pa.attackerIid, blockerIid);
+    return resolveBattle(fx.state, pa.attackerIid, blockerIid, lifeIids);
   }
 
   // No block -> direct damage to defender (player).
-  return resolveDirectDamage(state, pa.attackerIid);
+  return resolveDirectDamage(state, pa.attackerIid, lifeIids);
 }
 
 /** Battle between attacker and a defending character. */
-function resolveBattle(state: GameState, attackerIid: string, defenderIid: string): ApplyResult {
+function resolveBattle(state: GameState, attackerIid: string, defenderIid: string, lifeIids?: string[]): ApplyResult {
   const aBp = effectiveBp(state, attackerIid);
   const dBp = effectiveBp(state, defenderIid);
   const aDef = getDef(state, attackerIid);
@@ -404,7 +404,7 @@ function resolveBattle(state: GameState, attackerIid: string, defenderIid: strin
 
   // Impact: even if blocked, damage still goes through to the player.
   if (aDef.keywords.includes("impact")) {
-    return resolveDirectDamage(s, attackerIid);
+    return resolveDirectDamage(s, attackerIid, lifeIids);
   }
   return ok(s);
 }
@@ -424,7 +424,7 @@ function sideline(state: GameState, iid: string): GameState {
 }
 
 /** Deal direct damage to the defending player: reveal life cards, queue triggers. */
-function resolveDirectDamage(state: GameState, attackerIid: string): ApplyResult {
+function resolveDirectDamage(state: GameState, attackerIid: string, lifeIids?: string[]): ApplyResult {
   const attackerSeat = getInst(state, attackerIid).controller;
   const defender = opponentOf(attackerSeat);
   const def = getDef(state, attackerIid);
@@ -435,8 +435,18 @@ function resolveDirectDamage(state: GameState, attackerIid: string): ApplyResult
 
   const dp = s.players[defender];
   const revealCount = Math.min(amount, dp.life.length);
-  const revealed = dp.life.slice(0, revealCount);
-  s = withPlayer(s, defender, (p) => ({ ...p, life: p.life.slice(revealCount) }));
+  const targets = lifeIids ?? [];
+  if (revealCount > 0) {
+    if (targets.length !== revealCount) return err(`Choose ${revealCount} life card${revealCount === 1 ? "" : "s"} to reveal.`);
+    const uniqueTargets = new Set(targets);
+    if (uniqueTargets.size !== targets.length) return err("Choose different life cards.");
+    for (const iid of targets) {
+      if (!dp.life.includes(iid)) return err("Damage target must be one of the defender's life cards.");
+    }
+  }
+  const revealed = targets;
+  const revealedSet = new Set(revealed);
+  s = withPlayer(s, defender, (p) => ({ ...p, life: p.life.filter((iid) => !revealedSet.has(iid)) }));
   for (const iid of revealed) {
     s = withInstance(s, iid, (i) => ({ ...i, faceUp: true }));
   }

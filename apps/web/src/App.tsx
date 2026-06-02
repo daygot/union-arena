@@ -138,6 +138,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
   const { connected, seat, state, error, send } = goldfish ? demo : live;
   const [selected, setSelected] = useState<string | null>(null);
   const [raidSource, setRaidSource] = useState<string | null>(null);
+  const [lifeDamageTargets, setLifeDamageTargets] = useState<string[]>([]);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [previewIid, setPreviewIid] = useState<string | null>(null);
   const [draggedIid, setDraggedIid] = useState<string | null>(null);
@@ -154,7 +155,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
   const triggerIid = pendingTriggers?.iids[0] ?? null;
   const triggerDef = triggerIid ? state.defs[state.instances[triggerIid]!.defId]! : null;
   const canUseTurnActions = myTurn && !pendingAttack && !pendingTriggers;
-  const canRespondToAttack = seat !== "spectator" && pendingAttack && seat === defender;
+  const canRespondToAttack = seat !== "spectator" && pendingAttack != null && seat === defender;
   const canResolveTrigger = seat !== "spectator" && pendingTriggers?.seat === seat && triggerIid != null;
   const awaitingMulligans =
     state.turn === 1 &&
@@ -168,6 +169,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
     fn();
     setSelected(null);
     setRaidSource(null);
+    setLifeDamageTargets([]);
   };
 
   const owner = (iid: string): Seat => state.instances[iid]!.controller;
@@ -232,6 +234,34 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
     seat !== "spectator" &&
     state.players[seat].frontLine.includes(selected) &&
     state.instances[selected]!.orientation === "active";
+  const pendingAttackerDef = pendingAttack ? def(pendingAttack.attackerIid) : null;
+  const pendingAttackCanDamageLife =
+    Boolean(pendingAttack && pendingAttack.targetIid == null && pendingAttackerDef);
+  const pendingLifeDamageAmount = pendingAttackerDef
+    ? Math.min(Math.max(1, pendingAttackerDef.impactN ?? 1), state.players[me].life.length)
+    : 0;
+  const pendingAttackRequiresLifeTarget =
+    canRespondToAttack &&
+    pendingAttackCanDamageLife &&
+    state.players[me].life.length > 0;
+  const selectedLifeDamageTargets =
+    seat !== "spectator" ? lifeDamageTargets.filter((iid) => state.players[seat].life.includes(iid)) : [];
+  const lifeDamagePayload =
+    pendingAttackRequiresLifeTarget && selectedLifeDamageTargets.length > 0 ? { lifeIids: selectedLifeDamageTargets } : {};
+  const canTakeLifeDamage = !pendingAttackRequiresLifeTarget || selectedLifeDamageTargets.length === pendingLifeDamageAmount;
+  const selectedBlockerHasRequiredLifeTarget =
+    !selectedCanBlock ||
+    !pendingAttackerDef?.keywords.includes("impact") ||
+    !pendingAttackRequiresLifeTarget ||
+    selectedLifeDamageTargets.length === pendingLifeDamageAmount;
+  const chooseLifeDamageTarget = (iid: string) => {
+    setLifeDamageTargets((current) => {
+      if (pendingLifeDamageAmount <= 1) return [iid];
+      if (current.includes(iid)) return current.filter((target) => target !== iid);
+      if (current.length >= pendingLifeDamageAmount) return [...current.slice(1), iid];
+      return [...current, iid];
+    });
+  };
 
   const selectedCanRaidOnto =
     raidSource != null &&
@@ -367,6 +397,9 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           onDragEnd={() => setDraggedIid(null)}
           canDropTo={() => false}
           onDropTo={() => {}}
+          lifeDamageTargets={lifeDamageTargets}
+          canChooseLifeDamageTarget={false}
+          onLifeDamageTarget={chooseLifeDamageTarget}
           flip
         />
 
@@ -396,11 +429,24 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
             <div className="actions prompt">
               <span>Choose a blocker or take the hit.</span>
               {selectedCanBlock && (
-                <button onClick={() => act(() => send({ type: "declareBlock", seat: me, blockerIid: selected }))}>
+                <button
+                  disabled={!selectedBlockerHasRequiredLifeTarget}
+                  onClick={() => act(() => send({ type: "declareBlock", seat: me, blockerIid: selected, ...lifeDamagePayload }))}
+                >
                   Block with selected
                 </button>
               )}
-              <button onClick={() => act(() => send({ type: "declareBlock", seat: me }))}>
+              {pendingAttackRequiresLifeTarget && (
+                <span>
+                  {selectedLifeDamageTargets.length === pendingLifeDamageAmount
+                    ? "Life target selected."
+                    : `Choose ${pendingLifeDamageAmount} life card${pendingLifeDamageAmount === 1 ? "" : "s"} for damage.`}
+                </span>
+              )}
+              <button
+                disabled={!canTakeLifeDamage}
+                onClick={() => act(() => send({ type: "declareBlock", seat: me, ...lifeDamagePayload }))}
+              >
                 No Block
               </button>
             </div>
@@ -523,6 +569,9 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           onDragEnd={() => setDraggedIid(null)}
           canDropTo={(target) => canDropTo(target)}
           onDropTo={(target, iid) => dropTo(target, iid)}
+          lifeDamageTargets={lifeDamageTargets}
+          canChooseLifeDamageTarget={pendingAttackRequiresLifeTarget}
+          onLifeDamageTarget={chooseLifeDamageTarget}
         />
       </main>
 
@@ -550,9 +599,31 @@ function PlayerSide(props: {
   onDragEnd: () => void;
   canDropTo: (target: "frontLine" | "energyLine") => boolean;
   onDropTo: (target: "frontLine" | "energyLine", iid: string) => void;
+  lifeDamageTargets: string[];
+  canChooseLifeDamageTarget: boolean;
+  onLifeDamageTarget: (iid: string) => void;
   flip?: boolean;
 }) {
-  const { label, who, state, def, viewer, canSelect, selected, onSelect, onPreview, canDrag, onDragStart, onDragEnd, canDropTo, onDropTo, flip } = props;
+  const {
+    label,
+    who,
+    state,
+    def,
+    viewer,
+    canSelect,
+    selected,
+    onSelect,
+    onPreview,
+    canDrag,
+    onDragStart,
+    onDragEnd,
+    canDropTo,
+    onDropTo,
+    lifeDamageTargets,
+    canChooseLifeDamageTarget,
+    onLifeDamageTarget,
+    flip,
+  } = props;
   const p = state.players[who];
   const energy = energyPool(state, who);
   const zones = (
@@ -618,13 +689,25 @@ function PlayerSide(props: {
         <StackZone name="Life" count={p.life.length} kind="life">
           {p.life.map((iid) => {
             const inst = state.instances[iid]!;
+            const lifeSelected = lifeDamageTargets.includes(iid);
             return inst.faceUp ? (
               <Card key={iid} iid={iid} inst={inst} def={def(iid)}
                 variant="field"
-                selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
-                onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+                selectable={canChooseLifeDamageTarget || canSelect(iid)}
+                selected={lifeSelected || selected === iid}
+                draggable={canDrag(iid)}
+                onSelect={canChooseLifeDamageTarget ? onLifeDamageTarget : onSelect}
+                onPreview={onPreview}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd} />
             ) : (
-              <button key={iid} type="button" className="card facedown mini" aria-label="Face-down life card" />
+              <button
+                key={iid}
+                type="button"
+                className={`card facedown mini life-card ${canChooseLifeDamageTarget ? "can" : ""} ${lifeSelected ? "sel" : ""}`}
+                aria-label={canChooseLifeDamageTarget ? "Choose this life card for damage" : "Face-down life card"}
+                onClick={() => canChooseLifeDamageTarget && onLifeDamageTarget(iid)}
+              />
             );
           })}
         </StackZone>
