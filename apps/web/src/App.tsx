@@ -887,13 +887,7 @@ function energyText(spec: CardDef["requiredEnergy"]): string {
 
 function CardInspector(props: { def: CardDef | null }) {
   const { def } = props;
-  if (!def) {
-    return (
-      <aside className="inspector empty">
-        <div className="inspector-placeholder">Hover or select a card</div>
-      </aside>
-    );
-  }
+  if (!def) return null;
 
   return (
     <aside className={`inspector ${def.text ? "has-text" : ""}`}>

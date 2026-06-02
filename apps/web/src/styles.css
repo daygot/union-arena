@@ -616,15 +616,6 @@ body {
   box-shadow: 0 18px 42px rgba(0,0,0,.28);
   backdrop-filter: blur(18px);
 }
-.inspector.empty {
-  grid-template-columns: 1fr;
-  height: 94px;
-  min-height: 94px;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-}
-.inspector-placeholder { font-size: 13px; }
 .inspect-media {
   background:
     linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)),
@@ -835,10 +826,6 @@ body {
     min-height: 86px;
     max-height: min(132px, 19vh);
     grid-template-columns: 66px minmax(0, 1fr);
-  }
-  .inspector.empty {
-    height: 86px;
-    min-height: 86px;
   }
   .inspect-tags { display: none; }
   .inspect-grid { gap: 3px 7px; }
