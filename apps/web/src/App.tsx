@@ -504,9 +504,9 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
                 ))}
             </div>
           )}
-        </div>
 
-        <CardInspector def={inspectedDef} />
+          <CardInspector def={inspectedDef} />
+        </div>
 
         <PlayerSide
           label="You"
