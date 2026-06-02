@@ -722,6 +722,12 @@ body {
   pointer-events: none;
 }
 .actions {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--hand-row-h) + 12px);
+  z-index: 16;
+  transform: translateX(-50%);
+  max-width: min(100%, 980px);
   justify-self: center;
   display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 6px;
   background: rgba(6,12,14,.54);
@@ -740,6 +746,8 @@ body {
   pointer-events: auto;
 }
 .actions.prompt {
+  bottom: calc(var(--hand-row-h) + 16px);
+  max-width: min(100%, 1040px);
   align-items: center;
   background: linear-gradient(180deg, rgba(38,50,57,.92), rgba(14,24,27,.9));
   border: 1px solid var(--line-strong);
@@ -839,6 +847,7 @@ body {
   }
   .actions {
     padding: 5px;
+    bottom: calc(var(--hand-row-h) + 8px);
   }
   .actions button {
     padding: 5px 9px;
@@ -895,7 +904,10 @@ body {
   .actions {
     width: 100%;
     min-width: 0;
-    justify-self: stretch;
+    left: 10px;
+    right: 10px;
+    bottom: calc(var(--hand-row-h) + 8px);
+    transform: none;
     max-width: calc(100vw - 24px);
     justify-content: flex-start;
     overflow-x: auto;
