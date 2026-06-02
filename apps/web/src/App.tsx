@@ -471,6 +471,8 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           )}
         </div>
 
+        <CardInspector def={inspectedDef} />
+
         <PlayerSide
           label="You"
           who={me}
@@ -482,7 +484,6 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           onSelect={setSelected}
           onPreview={setPreviewIid}
         />
-        <CardInspector def={inspectedDef} />
       </main>
 
       <footer className="logbar">
@@ -613,15 +614,20 @@ function energySummary(pool: Record<Color, number>): string {
 }
 
 function EnergyStrip(props: { pool: Record<Color, number> }) {
+  const generatedColors = COLORS.filter((color) => props.pool[color] > 0);
   return (
     <div className="energy-strip" aria-label={`Energy generation ${energySummary(props.pool)}`}>
       <span className="energy-label">Energy</span>
-      {COLORS.map((color) => (
-        <span key={color} className={`energy-chip ${color}`}>
-          <span className={`dot ${color}`} />
-          <b>{props.pool[color]}</b>
-        </span>
-      ))}
+      {generatedColors.length === 0 ? (
+        <b className="energy-empty">0</b>
+      ) : (
+        generatedColors.map((color) => (
+          <span key={color} className={`energy-chip ${color}`}>
+            <span className={`dot ${color}`} />
+            <b>{props.pool[color]}</b>
+          </span>
+        ))
+      )}
     </div>
   );
 }
