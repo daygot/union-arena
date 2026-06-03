@@ -64,6 +64,7 @@ function hasRequiredEnergy(state: GameState, seat: Seat, card: CardDef): boolean
 }
 
 const COLORS: Color[] = ["red", "blue", "green", "yellow", "purple"];
+type PublicPileZone = "removal" | "sideline";
 
 function canPayForCard(state: GameState, seat: Seat, card: CardDef): boolean {
   return activeApCount(state, seat) >= card.apCost && hasRequiredEnergy(state, seat, card);
@@ -134,8 +135,8 @@ function cardZone(state: GameState, seat: Seat, iid: string): string {
 
 function cardActionStatus(state: GameState, seat: Seat, iid: string, effectIds: string[]): string {
   const inst = state.instances[iid];
-  const actions = effectIds.map(effectButtonLabel).join(", ") || "none";
-  return `${cardZone(state, seat, iid)} · ${inst?.orientation ?? "unknown"} · phase ${state.phase} · actions ${actions}`;
+  const actionText = effectIds.length > 0 ? ` · ${effectIds.length} action${effectIds.length === 1 ? "" : "s"}` : "";
+  return `${cardZone(state, seat, iid)} · ${inst?.orientation ?? "unknown"} · phase ${state.phase}${actionText}`;
 }
 
 export function App() {
@@ -213,6 +214,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [previewIid, setPreviewIid] = useState<string | null>(null);
   const [draggedIid, setDraggedIid] = useState<string | null>(null);
+  const [pileView, setPileView] = useState<{ seat: Seat; zone: PublicPileZone } | null>(null);
 
   if (!connected) return <Center>{error ?? "Connecting to server..."}</Center>;
   if (!state || seat == null) return <Center>Joining room “{roomId}”…</Center>;
@@ -502,6 +504,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           onSelect={setSelected}
           onPreview={setPreviewIid}
           fieldActions={() => null}
+          onOpenPile={(zone) => setPileView({ seat: opp, zone })}
           canDrag={canDrag}
           onDragStart={setDraggedIid}
           onDragEnd={() => setDraggedIid(null)}
@@ -672,6 +675,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           onSelect={setSelected}
           onPreview={setPreviewIid}
           fieldActions={(iid) => activationButtonsFor(iid, true)}
+          onOpenPile={(zone) => setPileView({ seat: me, zone })}
           canDrag={canDrag}
           onDragStart={setDraggedIid}
           onDragEnd={() => setDraggedIid(null)}
@@ -682,6 +686,16 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           onLifeDamageTarget={chooseLifeDamageTarget}
         />
       </main>
+
+      {pileView && (
+        <PileModal
+          title={`${pileView.seat} ${pileView.zone}`}
+          iids={state.players[pileView.seat][pileView.zone]}
+          def={def}
+          state={state}
+          onClose={() => setPileView(null)}
+        />
+      )}
 
       <footer className="logbar">
         {state.log.slice(-6).map((e, i) => (
@@ -703,6 +717,7 @@ function PlayerSide(props: {
   onSelect: (iid: string) => void;
   onPreview: (iid: string | null) => void;
   fieldActions: (iid: string) => React.ReactNode;
+  onOpenPile: (zone: PublicPileZone) => void;
   canDrag: (iid: string) => boolean;
   onDragStart: (iid: string) => void;
   onDragEnd: () => void;
@@ -724,6 +739,7 @@ function PlayerSide(props: {
     onSelect,
     onPreview,
     fieldActions,
+    onOpenPile,
     canDrag,
     onDragStart,
     onDragEnd,
@@ -829,20 +845,10 @@ function PlayerSide(props: {
           {p.deck.length > 0 && <div className="card facedown stack-card" />}
         </StackZone>
         <StackZone name="Removal" count={p.removal.length} kind="removal">
-          {p.removal.map((iid) => (
-            <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
-              variant="field"
-              selectable={false} selected={false} draggable={false}
-              onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
-          ))}
+          <PileButton zone="removal" count={p.removal.length} onOpen={onOpenPile} />
         </StackZone>
         <StackZone name="Sideline" count={p.sideline.length} kind="sideline">
-          {p.sideline.map((iid) => (
-            <Card key={iid} iid={iid} inst={state.instances[iid]!} def={def(iid)}
-              variant="field"
-              selectable={canSelect(iid)} selected={selected === iid} draggable={canDrag(iid)}
-              onSelect={onSelect} onPreview={onPreview} onDragStart={onDragStart} onDragEnd={onDragEnd} />
-          ))}
+          <PileButton zone="sideline" count={p.sideline.length} onOpen={onOpenPile} />
         </StackZone>
       </div>
     </section>
@@ -926,6 +932,62 @@ function StackZone(props: { name: string; count: number; kind: "life" | "deck" |
     <div className={`stack-zone stack-${props.kind}`}>
       <div className="zone-label">{props.name} ({props.count})</div>
       <div className="stack-cards">{props.children}</div>
+    </div>
+  );
+}
+
+function PileButton(props: { zone: PublicPileZone; count: number; onOpen: (zone: PublicPileZone) => void }) {
+  return (
+    <button
+      type="button"
+      className={`pile-button pile-${props.zone}`}
+      disabled={props.count === 0}
+      onClick={() => props.onOpen(props.zone)}
+      aria-label={`View ${props.zone}, ${props.count} cards`}
+    >
+      <span className="pile-stack" />
+      <b>{props.count}</b>
+    </button>
+  );
+}
+
+function PileModal(props: {
+  title: string;
+  iids: string[];
+  def: (iid: string) => CardDef;
+  state: GameState;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={props.title} onClick={props.onClose}>
+      <div className="pile-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="pile-modal-head">
+          <h3>{props.title} ({props.iids.length})</h3>
+          <button type="button" onClick={props.onClose}>Close</button>
+        </div>
+        <div className="pile-modal-grid">
+          {props.iids.length === 0 ? (
+            <span className="pile-empty">No cards</span>
+          ) : (
+            props.iids.map((iid) => (
+              <Card
+                key={iid}
+                iid={iid}
+                inst={props.state.instances[iid]!}
+                def={props.def(iid)}
+                variant="field"
+                selectable={false}
+                selected={false}
+                draggable={false}
+                onSelect={() => {}}
+                onPreview={() => {}}
+                onDragStart={() => {}}
+                onDragEnd={() => {}}
+              />
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }

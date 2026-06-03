@@ -377,7 +377,8 @@ function handleDeclareBlock(state: GameState, seat: Seat, blockerIid?: string, l
     // Fire on-block abilities (e.g. conditional BP gain) while pendingAttack is set.
     const fx = runEffects(s, blockerIid, "onBlock", {});
     if (!fx.ok) return fx;
-    return resolveBattle(fx.state, pa.attackerIid, blockerIid, lifeIids);
+    s = withInstance(fx.state, blockerIid, (i) => ({ ...i, blockedThisTurn: true }));
+    return resolveBattle(s, pa.attackerIid, blockerIid, lifeIids);
   }
 
   // No block -> direct damage to defender (player).
@@ -583,12 +584,13 @@ function runEndPhase(state: GameState): GameState {
   // Clear "until end of turn" BP modifiers on all characters (both players).
   for (const iid of Object.keys(s.instances)) {
     const inst = s.instances[iid]!;
-    if (inst.bpModifier || inst.energyModifier?.length || inst.sidelineAtEndOfMain) {
+    if (inst.bpModifier || inst.energyModifier?.length || inst.sidelineAtEndOfMain || inst.blockedThisTurn) {
       s = withInstance(s, iid, (i) => ({
         ...i,
         bpModifier: 0,
         energyModifier: [],
         sidelineAtEndOfMain: false,
+        blockedThisTurn: false,
       }));
     }
   }

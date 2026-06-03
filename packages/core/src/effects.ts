@@ -247,7 +247,10 @@ export const EFFECTS: Record<string, EffectDef> = {
     id: "double_block",
     when: "onBlock",
     text: "When this character blocks for the first time this turn, switch it to active.",
-    run: (state, ctx) => ok(withInstance(state, ctx.iid, (i) => ({ ...i, orientation: "active" }))),
+    run: (state, ctx) => {
+      if (getInst(state, ctx.iid).blockedThisTurn) return ok(state);
+      return ok(withInstance(state, ctx.iid, (i) => ({ ...i, orientation: "active" })));
+    },
   },
 
   // "Choose up to one other character on your field. It gains 3000 BP until end of turn."

@@ -34,6 +34,7 @@ reg(def({ id: "BUFFER", bp: 500, apCost: 0, effectIds: ["buff_other_3000_eot"] }
 reg(def({ id: "PLAY_FILTER", bp: 500, apCost: 0, effectIds: ["draw_card_then_sideline_card_on_play"] }));
 reg(def({ id: "RESTER", bp: 500, apCost: 0, effectIds: ["rest_opponent_front_on_play"] }));
 reg(def({ id: "BOUNCER", bp: 500, apCost: 0, effectIds: ["return_other_1_energy_or_self_to_hand_on_play"] }));
+reg(def({ id: "LIFE_PLACER", bp: 4000, apCost: 0, effectIds: ["place_opponent_front_into_life_on_play"] }));
 // activate: self +3000
 reg(def({ id: "PUMP", bp: 1000, effectIds: ["buff_self_3000_eot"] }));
 // on-block: +2000 if attacker <=3000
@@ -146,6 +147,18 @@ describe("on-play ability", () => {
     expect(s.players.p1.frontLine).toContain(bouncer);
     expect(s.players.p1.frontLine).not.toContain(target);
     expect(s.players.p1.hand).toContain(target);
+  });
+
+  it("places an opponent front-line character face up into life", () => {
+    const g = game();
+    const target = place(g, "p2", "frontLine", "BIGGER");
+    const placer = place(g, "p1", "hand", "LIFE_PLACER");
+
+    const s = must(applyIntent(g, { type: "playCard", seat: "p1", iid: placer, to: "frontLine" }));
+
+    expect(s.players.p2.frontLine).not.toContain(target);
+    expect(s.players.p2.life).toContain(target);
+    expect(s.instances[target]!.faceUp).toBe(true);
   });
 });
 
@@ -287,6 +300,24 @@ describe("on-block ability", () => {
 
     expect(s2.players.p2.frontLine).toContain(blocker);
     expect(s2.instances[blocker]!.orientation).toBe("active");
+    expect(s2.instances[blocker]!.blockedThisTurn).toBe(true);
+  });
+
+  it("Double Block only switches active on the first block each turn", () => {
+    const g = game();
+    g.phase = "attack";
+    g.activeSeat = "p1";
+    const attacker1 = place(g, "p1", "frontLine", "PLAIN");
+    const attacker2 = place(g, "p1", "frontLine", "PLAIN");
+    const blocker = place(g, "p2", "frontLine", "DOUBLE_BLOCK");
+
+    const s1 = must(applyIntent(g, { type: "declareAttack", seat: "p1", attackerIid: attacker1 }));
+    const s2 = must(applyIntent(s1, { type: "declareBlock", seat: "p2", blockerIid: blocker }));
+    expect(s2.instances[blocker]!.orientation).toBe("active");
+
+    const s3 = must(applyIntent(s2, { type: "declareAttack", seat: "p1", attackerIid: attacker2 }));
+    const s4 = must(applyIntent(s3, { type: "declareBlock", seat: "p2", blockerIid: blocker }));
+    expect(s4.instances[blocker]!.orientation).toBe("resting");
   });
 
   it("nullifies Impact during a blocked battle", () => {

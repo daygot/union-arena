@@ -100,6 +100,8 @@ export interface CardInstance {
   energyModifier?: EnergySpec[];
   /** Some effects sideline their source at the end of the main phase. */
   sidelineAtEndOfMain?: boolean;
+  /** Tracks once-per-turn block abilities such as Double Block. */
+  blockedThisTurn?: boolean;
 }
 
 export type ZoneId =
