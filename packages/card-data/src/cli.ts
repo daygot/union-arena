@@ -109,11 +109,13 @@ async function main(): Promise<void> {
     const steps = Number(arg("--steps") ?? "200");
     const seed = Number(arg("--seed") ?? "1");
     const productCode = arg("--product");
+    const biasEffects = process.argv.includes("--bias-effects");
     for (let i = 0; i < games; i++) {
       const result = runSelfPlay({
         setsDir: OUT_DIR,
         seed: seed + i,
         maxSteps: steps,
+        biasEffects,
         ...(productCode ? { productCode } : {}),
       });
       if (!result.ok) {
@@ -132,7 +134,7 @@ async function main(): Promise<void> {
     console.error("       scrape --coverage");
     console.error("       scrape --audit");
     console.error("       scrape --taxonomy");
-    console.error("       scrape --selfplay [--games N] [--steps N] [--seed N] [--product UE19BT/SMD]");
+    console.error("       scrape --selfplay [--games N] [--steps N] [--seed N] [--product UE19BT/SMD] [--bias-effects]");
     process.exit(1);
   }
   const limitStr = arg("--limit");

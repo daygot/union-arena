@@ -7,6 +7,7 @@ import type {
   GameState,
   PlayerState,
   Seat,
+  ZoneId,
 } from "./types.js";
 
 /** Shared result constructors. */
@@ -118,4 +119,20 @@ export function payAp(state: GameState, seat: Seat, cost: number): GameState {
 /** Remove an iid from whatever player-zone arrays it sits in (lightweight; caller knows the zone). */
 export function removeFrom(arr: string[], iid: string): string[] {
   return arr.filter((x) => x !== iid);
+}
+
+export type StackDestination = Extract<ZoneId, "hand" | "life" | "sideline" | "removal">;
+
+/** Move a field card and any cards stacked under it to a non-field zone. */
+export function moveStackFromFieldToZone(state: GameState, iid: string, zone: StackDestination): GameState {
+  const inst = getInst(state, iid);
+  const stack = [iid, ...inst.raidUnder];
+  let s = withPlayer(state, inst.owner, (p) => ({
+    ...p,
+    frontLine: removeFrom(p.frontLine, iid),
+    energyLine: removeFrom(p.energyLine, iid),
+    [zone]: [...p[zone], ...stack],
+  }));
+  s = withInstance(s, iid, (i) => ({ ...i, raidUnder: [] }));
+  return s;
 }

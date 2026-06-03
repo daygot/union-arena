@@ -7,7 +7,18 @@
 //
 // This is intentionally small and data-driven: add new ids + patterns as sets land.
 import type { ApplyResult, GameState, Seat } from "./types.js";
-import { effectiveBp, err, getDef, getInst, ok, opponentOf, removeFrom, withInstance, withPlayer } from "./helpers.js";
+import {
+  effectiveBp,
+  err,
+  getDef,
+  getInst,
+  moveStackFromFieldToZone,
+  ok,
+  opponentOf,
+  removeFrom,
+  withInstance,
+  withPlayer,
+} from "./helpers.js";
 
 /** When an effect fires. */
 export type EffectTrigger =
@@ -136,25 +147,13 @@ function firstOtherOwnCharacter(state: GameState, seat: Seat, iid: string): stri
   return ownField(state, seat).find((candidate) => candidate !== iid && getDef(state, candidate).type === "character");
 }
 
-function removeFromField(state: GameState, seat: Seat, iid: string): GameState {
-  return withPlayer(state, seat, (p) => ({
-    ...p,
-    frontLine: removeFrom(p.frontLine, iid),
-    energyLine: removeFrom(p.energyLine, iid),
-  }));
-}
-
 function sidelineFromField(state: GameState, iid: string): GameState {
-  const inst = getInst(state, iid);
-  let s = removeFromField(state, inst.controller, iid);
-  s = withPlayer(s, inst.owner, (p) => ({ ...p, sideline: [...p.sideline, iid] }));
+  let s = moveStackFromFieldToZone(state, iid, "sideline");
   return withInstance(s, iid, (i) => ({ ...i, orientation: "active" }));
 }
 
 function returnFromFieldToHand(state: GameState, iid: string): GameState {
-  const inst = getInst(state, iid);
-  let s = removeFromField(state, inst.controller, iid);
-  s = withPlayer(s, inst.owner, (p) => ({ ...p, hand: [...p.hand, iid] }));
+  let s = moveStackFromFieldToZone(state, iid, "hand");
   return withInstance(s, iid, (i) => ({ ...i, orientation: "active" }));
 }
 
@@ -163,9 +162,8 @@ function placeOpponentFrontIntoLife(state: GameState, seat: Seat, targetIid?: st
   const target = targetIid ?? opponentFront(state, seat)[0];
   if (!target) return ok(state);
   if (!state.players[opponent].frontLine.includes(target)) return err("Target must be on opponent's front line.");
-  let s = removeFromField(state, opponent, target);
+  let s = moveStackFromFieldToZone(state, target, "life");
   s = withInstance(s, target, (i) => ({ ...i, orientation: "active", faceUp: true }));
-  s = withPlayer(s, opponent, (p) => ({ ...p, life: [...p.life, target] }));
   return ok(s);
 }
 

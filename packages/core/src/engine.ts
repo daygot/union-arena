@@ -16,6 +16,7 @@ import {
   getDef,
   getInst,
   hasRequiredEnergy,
+  moveStackFromFieldToZone,
   ok,
   opponentOf,
   payAp,
@@ -417,14 +418,7 @@ function resolveBattle(state: GameState, attackerIid: string, defenderIid: strin
 
 /** Move a character from the field to its owner's sideline. */
 function sideline(state: GameState, iid: string): GameState {
-  const inst = getInst(state, iid);
-  const owner = inst.owner;
-  let s = withPlayer(state, inst.controller, (p) => ({
-    ...p,
-    frontLine: removeFrom(p.frontLine, iid),
-    energyLine: removeFrom(p.energyLine, iid),
-  }));
-  s = withPlayer(s, owner, (p) => ({ ...p, sideline: [...p.sideline, iid] }));
+  let s = moveStackFromFieldToZone(state, iid, "sideline");
   s = withInstance(s, iid, (i) => ({ ...i, orientation: "active" }));
   return log(s, { kind: "sideline", iid });
 }

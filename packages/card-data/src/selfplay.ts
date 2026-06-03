@@ -51,6 +51,7 @@ export interface SelfPlayOptions {
   seed?: number;
   productCode?: string;
   maxSteps?: number;
+  biasEffects?: boolean;
 }
 
 interface ProductPool {
@@ -332,6 +333,29 @@ function candidatesFor(state: GameState): Intent[] {
   }
 }
 
+function isEffectBiasedIntent(intent: Intent): boolean {
+  switch (intent.type) {
+    case "activateAbility":
+    case "useEvent":
+    case "raid":
+      return true;
+    case "resolveTrigger":
+      return intent.activate;
+    default:
+      return false;
+  }
+}
+
+function orderCandidates(candidates: Intent[], seed: number, biasEffects: boolean): { items: Intent[]; seed: number } {
+  if (!biasEffects) return shuffled(candidates, seed);
+
+  const preferred = candidates.filter(isEffectBiasedIntent);
+  const fallback = candidates.filter((intent) => !isEffectBiasedIntent(intent));
+  const shuffledPreferred = shuffled(preferred, seed);
+  const shuffledFallback = shuffled(fallback, shuffledPreferred.seed);
+  return { items: [...shuffledPreferred.items, ...shuffledFallback.items], seed: shuffledFallback.seed };
+}
+
 function describeLocation(location: InstanceLocation): string {
   switch (location.kind) {
     case "zone":
@@ -538,7 +562,7 @@ export function runSelfPlay(options: SelfPlayOptions): SelfPlayResult {
 
     const actor = requiredActor(state);
     const generated = candidatesFor(state);
-    const ordered = shuffled(generated, rng);
+    const ordered = orderCandidates(generated, rng, options.biasEffects ?? false);
     rng = ordered.seed;
 
     let accepted: { intent: Intent; state: GameState } | null = null;

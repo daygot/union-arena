@@ -44,12 +44,16 @@ There is also:
 
 - `packages/card-data/src/selfplay.test.ts`, including a short deterministic SAKAMOTO DAYS run.
 - `pnpm --filter @union-arena/card-data selfplay -- --games 200 --steps 300 --seed 1234`
+- `pnpm --filter @union-arena/card-data selfplay -- --games 200 --steps 400 --seed 1234 --bias-effects`
+
+Use `--bias-effects` when hunting gameplay bugs around abilities. It still uses the same reducer and invariant checks, but orders generated intents so active triggers, manual abilities, events, and Raid lines are tried before generic play/attack/phase choices.
 
 Next implementation step:
 
 1. Improve the bot's target choices for card-specific effects that currently rely on first-target fallbacks.
-2. Run longer cross-product hunts and turn any failure transcript into a regression test.
-3. Add a browser/Playwright layer that uses similar high-level decisions to catch UI-only bugs.
+2. Track effect coverage counts per run so we can see which effect ids were actually exercised.
+3. Run longer cross-product hunts and turn any failure transcript into a regression test.
+4. Add a browser/Playwright layer that uses similar high-level decisions to catch UI-only bugs.
 
 ## Intent Generator Sketch
 

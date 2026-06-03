@@ -35,6 +35,13 @@ reg(def({ id: "STEP", bp: 1000, keywords: ["step"] as Keyword[] }));
 reg(def({ id: "SNIPE", bp: 2000, keywords: ["snipe"] as Keyword[] }));
 reg(def({ id: "IMPACT", bp: 1000, keywords: ["impact"] as Keyword[] }));
 reg(def({ id: "RAID", bp: 4000, keywords: ["raid"] as Keyword[], apCost: 1, requiredEnergy: [{ color: "red", amount: 1 }] }));
+reg(def({
+  id: "BOUNCER",
+  bp: 1000,
+  apCost: 0,
+  requiredEnergy: [{ color: "red", amount: 1 }],
+  effectIds: ["return_other_1_energy_or_self_to_hand_on_play"],
+}));
 reg(def({ id: "AP", type: "site", name: "AP", energyGeneration: [], apCost: 0 }));
 
 function must(r: ApplyResult): GameState {
@@ -273,6 +280,31 @@ describe("main phase: playing cards", () => {
       iid: stacked.players.p1.hand[0]!,
       targetIid: base,
     }).ok).toBe(false);
+  });
+
+  it("moves the whole Raid stack when the top card returns to hand", () => {
+    let g = fixture({
+      phase: "main",
+      p1: { energyLine: ["ENERGY", "SMALL"], frontLine: ["SMALL"], hand: ["RAID", "BOUNCER"] },
+    });
+    const raid = g.players.p1.hand[0]!;
+    const bouncer = g.players.p1.hand[1]!;
+    const firstBase = g.players.p1.frontLine[0]!;
+    const secondBase = g.players.p1.energyLine[1]!;
+
+    g = must(applyIntent(g, { type: "raid", seat: "p1", iid: raid, targetIid: firstBase }));
+    expect(g.instances[raid]!.raidUnder).toEqual([firstBase]);
+
+    g = must(applyIntent(g, { type: "playCard", seat: "p1", iid: bouncer, to: "frontLine" }));
+    expect(g.players.p1.hand).toEqual(expect.arrayContaining([raid, firstBase]));
+    expect(g.instances[raid]!.raidUnder).toEqual([]);
+    expect(g.players.p1.frontLine).not.toContain(raid);
+    expect(g.players.p1.frontLine).not.toContain(firstBase);
+
+    g = must(applyIntent(g, { type: "raid", seat: "p1", iid: raid, targetIid: secondBase, moveToFront: true }));
+    expect(g.instances[raid]!.raidUnder).toEqual([secondBase]);
+    expect(g.players.p1.hand).toContain(firstBase);
+    expect(g.players.p1.frontLine).toContain(raid);
   });
 });
 
