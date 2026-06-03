@@ -30,6 +30,8 @@ export interface TriggerInput {
   targetIid?: string;
   /** Card iid to play for color(green=from hand, purple=from sideline). */
   playIid?: string;
+  /** For raid triggers, move an energy-line base's Raid stack to front line. */
+  moveToFront?: boolean;
 }
 
 const ACTIVE_BP_BONUS = 3000;
@@ -142,13 +144,13 @@ function resolveFinal(state: GameState, seat: Seat, iid: string): ApplyResult {
 //    (if you meet its energy requirement), OR just add the card to hand.
 //    With `activate` + a `targetIid` (the base char) we attempt the Raid; otherwise add to hand.
 function resolveRaid(state: GameState, input: TriggerInput): ApplyResult {
-  const { seat, iid, targetIid } = input;
+  const { seat, iid, targetIid, moveToFront } = input;
   // No raid target chosen -> add the revealed card to hand.
   if (!targetIid) {
     const s = withPlayer(state, seat, (p) => ({ ...p, hand: [...p.hand, iid] }));
     return ok(withInstance(s, iid, (i) => ({ ...i, faceUp: false })));
   }
-  return performRaid(state, { seat, raidIid: iid, targetIid });
+  return performRaid(state, { seat, raidIid: iid, targetIid, moveToFront });
 }
 
 // 4. color — effect depends on the revealed card's color.

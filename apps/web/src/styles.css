@@ -344,7 +344,9 @@ body {
 .field-card-actions {
   width: 100%;
   display: flex;
+  flex-direction: column;
   justify-content: center;
+  gap: 3px;
 }
 .field-action-button {
   width: 100%;
@@ -365,6 +367,10 @@ body {
   cursor: not-allowed;
   filter: grayscale(.7);
   opacity: .58;
+}
+.stack-action-button {
+  background: linear-gradient(180deg, #d7e5d3, #a9c3a2);
+  color: #111a12;
 }
 .zone-hand .zone-cards {
   justify-content: center;
@@ -651,6 +657,22 @@ body {
   border: 1px solid rgba(255,216,74,.62);
   color: var(--warn);
   font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 5px 14px rgba(0,0,0,.24);
+}
+.field-stack-badge {
+  position: absolute;
+  top: 23px;
+  right: 5px;
+  z-index: 2;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(7,12,14,.86);
+  border: 1px solid rgba(154,200,255,.58);
+  color: #cfe4ff;
+  font-size: 9px;
   font-weight: 850;
   line-height: 1;
   font-variant-numeric: tabular-nums;

@@ -47,7 +47,7 @@ export function applyIntent(state: GameState, intent: Intent): ApplyResult {
     case "playCard":
       return handlePlayCard(state, intent.seat, intent.iid, intent.to, intent.targetIid);
     case "raid":
-      return handleRaid(state, intent.seat, intent.iid, intent.targetIid);
+      return handleRaid(state, intent.seat, intent.iid, intent.targetIid, intent.moveToFront);
     case "useEvent":
       return handleUseEvent(state, intent.seat, intent.iid);
     case "declareAttack":
@@ -256,6 +256,7 @@ function handleRaid(
   seat: Seat,
   iid: string,
   targetIid: string,
+  moveToFront = false,
 ): ApplyResult {
   if (seat !== state.activeSeat) return err("Not your turn.");
   if (state.phase !== "main") return err("Can only Raid during main phase.");
@@ -266,7 +267,7 @@ function handleRaid(
 
   let s = payAp(state, seat, def.apCost);
   s = withPlayer(s, seat, (pl) => ({ ...pl, hand: removeFrom(pl.hand, iid) }));
-  const raid = performRaid(s, { seat, raidIid: iid, targetIid });
+  const raid = performRaid(s, { seat, raidIid: iid, targetIid, moveToFront });
   if (!raid.ok) return raid;
   const to = raid.state.players[seat].frontLine.includes(iid) ? "frontLine" : "energyLine";
   const fx = runEffects(raid.state, iid, "onPlay", {});
@@ -473,7 +474,7 @@ function handleResolveTrigger(
   state: GameState,
   intent: Extract<Intent, { type: "resolveTrigger" }>,
 ): ApplyResult {
-  const { seat, iid, activate, targetIid, playIid } = intent;
+  const { seat, iid, activate, targetIid, playIid, moveToFront } = intent;
   const pt = state.pendingTriggers;
   if (!pt) return err("No triggers to resolve.");
   if (seat !== pt.seat) return err("Only the damaged player resolves their triggers.");
@@ -491,6 +492,7 @@ function handleResolveTrigger(
     activate,
     ...(targetIid ? { targetIid } : {}),
     ...(playIid ? { playIid } : {}),
+    ...(moveToFront !== undefined ? { moveToFront } : {}),
   });
   if (!res.ok) return res;
   let s = log(res.state, { kind: "trigger", seat, iid, activated: activate });

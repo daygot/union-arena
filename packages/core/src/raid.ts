@@ -1,10 +1,11 @@
-import { err, getDef, hasRequiredEnergy, ok, withInstance, withPlayer } from "./helpers.js";
+import { err, getDef, hasRequiredEnergy, ok, removeFrom, withInstance, withPlayer } from "./helpers.js";
 import type { ApplyResult, GameState, Seat } from "./types.js";
 
 export interface RaidInput {
   seat: Seat;
   raidIid: string;
   targetIid: string;
+  moveToFront?: boolean;
 }
 
 /**
@@ -16,7 +17,7 @@ export interface RaidInput {
  * under `raidUnder`.
  */
 export function performRaid(state: GameState, input: RaidInput): ApplyResult {
-  const { seat, raidIid, targetIid } = input;
+  const { seat, raidIid, targetIid, moveToFront = false } = input;
   const raidDef = getDef(state, raidIid);
   const base = state.instances[targetIid];
   const player = state.players[seat];
@@ -39,6 +40,9 @@ export function performRaid(state: GameState, input: RaidInput): ApplyResult {
   if (!hasRequiredEnergy(state, seat, raidDef)) {
     return err("Not enough energy to Raid this card.");
   }
+  if (moveToFront && onEnergy && player.frontLine.length >= 4) {
+    return err("Front line is full.");
+  }
 
   let s = withInstance(state, raidIid, (i) => ({
     ...i,
@@ -54,9 +58,13 @@ export function performRaid(state: GameState, input: RaidInput): ApplyResult {
     ...p,
     frontLine: onFront
       ? p.frontLine.map((x) => (x === targetIid ? raidIid : x))
-      : p.frontLine,
+      : moveToFront && onEnergy
+        ? [...p.frontLine, raidIid]
+        : p.frontLine,
     energyLine: onEnergy
-      ? p.energyLine.map((x) => (x === targetIid ? raidIid : x))
+      ? moveToFront
+        ? removeFrom(p.energyLine, targetIid)
+        : p.energyLine.map((x) => (x === targetIid ? raidIid : x))
       : p.energyLine,
   }));
 

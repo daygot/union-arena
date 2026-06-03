@@ -65,6 +65,7 @@ function hasRequiredEnergy(state: GameState, seat: Seat, card: CardDef): boolean
 
 const COLORS: Color[] = ["red", "blue", "green", "yellow", "purple"];
 type PublicPileZone = "removal" | "sideline";
+type StackView = { topIid: string };
 
 function canPayForCard(state: GameState, seat: Seat, card: CardDef): boolean {
   return activeApCount(state, seat) >= card.apCost && hasRequiredEnergy(state, seat, card);
@@ -215,6 +216,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
   const [previewIid, setPreviewIid] = useState<string | null>(null);
   const [draggedIid, setDraggedIid] = useState<string | null>(null);
   const [pileView, setPileView] = useState<{ seat: Seat; zone: PublicPileZone } | null>(null);
+  const [stackView, setStackView] = useState<StackView | null>(null);
 
   if (!connected) return <Center>{error ?? "Connecting to server..."}</Center>;
   if (!state || seat == null) return <Center>Joining room “{roomId}”…</Center>;
@@ -262,6 +264,31 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
         </button>
       );
     });
+  };
+  const stackButtonFor = (iid: string) => {
+    const underCount = state.instances[iid]?.raidUnder.length ?? 0;
+    if (underCount === 0) return null;
+    return (
+      <button
+        key={`${iid}-stack`}
+        type="button"
+        className="field-action-button stack-action-button"
+        onClick={() => setStackView({ topIid: iid })}
+      >
+        View Under ({underCount})
+      </button>
+    );
+  };
+  const fieldActionsFor = (iid: string, includeAbilities: boolean) => {
+    const abilityButtons = includeAbilities ? (activationButtonsFor(iid, true) ?? []) : [];
+    const stackButton = stackButtonFor(iid);
+    if (abilityButtons.length === 0 && !stackButton) return null;
+    return (
+      <>
+        {abilityButtons}
+        {stackButton}
+      </>
+    );
   };
   const inspectedActivationButtons =
     inspectedIid && inspectedOnMyField ? activationButtonsFor(inspectedIid) : null;
@@ -379,6 +406,16 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
     selected != null &&
     seat !== "spectator" &&
     canSelect(selected);
+  const selectedRaidBaseInEnergy =
+    selectedCanRaidOnto &&
+    selected != null &&
+    state.players[me].energyLine.includes(selected);
+  const selectedRaidBaseInFront =
+    selectedCanRaidOnto &&
+    selected != null &&
+    state.players[me].frontLine.includes(selected);
+  const selectedRaidCanMoveToFront =
+    selectedRaidBaseInEnergy && state.players[me].frontLine.length < 4;
 
   const triggerNeedsSelection = (): boolean => {
     if (!triggerDef) return false;
@@ -503,7 +540,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           selected={selected}
           onSelect={setSelected}
           onPreview={setPreviewIid}
-          fieldActions={() => null}
+          fieldActions={(iid) => fieldActionsFor(iid, false)}
           onOpenPile={(zone) => setPileView({ seat: opp, zone })}
           canDrag={canDrag}
           onDragStart={setDraggedIid}
@@ -588,9 +625,26 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
                 Raid: <b>{def(raidSource).name}</b> onto a base character.
               </span>
               {selectedCanRaidOnto && (
-                <button onClick={() => act(() => send({ type: "raid", seat, iid: raidSource, targetIid: selected! }))}>
-                  Raid onto selected
-                </button>
+                <>
+                  <button onClick={() => act(() => send({ type: "raid", seat, iid: raidSource, targetIid: selected! }))}>
+                    {selectedRaidBaseInFront ? "Raid onto selected" : "Raid in Energy"}
+                  </button>
+                  {selectedRaidBaseInEnergy && (
+                    <button
+                      disabled={!selectedRaidCanMoveToFront}
+                      title={selectedRaidCanMoveToFront ? "Move the Raid stack to the front line." : "Front line is full."}
+                      onClick={() => act(() => send({
+                        type: "raid",
+                        seat,
+                        iid: raidSource,
+                        targetIid: selected!,
+                        moveToFront: true,
+                      }))}
+                    >
+                      Raid to Front
+                    </button>
+                  )}
+                </>
               )}
               <button onClick={() => act(() => {})}>
                 Cancel
@@ -674,7 +728,7 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           selected={selected}
           onSelect={setSelected}
           onPreview={setPreviewIid}
-          fieldActions={(iid) => activationButtonsFor(iid, true)}
+          fieldActions={(iid) => fieldActionsFor(iid, true)}
           onOpenPile={(zone) => setPileView({ seat: me, zone })}
           canDrag={canDrag}
           onDragStart={setDraggedIid}
@@ -694,6 +748,16 @@ function GameTable(props: { roomId: string; goldfish?: boolean }) {
           def={def}
           state={state}
           onClose={() => setPileView(null)}
+        />
+      )}
+
+      {stackView && (
+        <PileModal
+          title={`Under ${def(stackView.topIid).name}`}
+          iids={state.instances[stackView.topIid]?.raidUnder ?? []}
+          def={def}
+          state={state}
+          onClose={() => setStackView(null)}
         />
       )}
 
@@ -1052,6 +1116,7 @@ function Card(props: {
       {variant === "field" && (
         <>
           {def.bp != null && <div className="field-bp-badge">BP {def.bp + (inst.bpModifier ?? 0)}</div>}
+          {inst.raidUnder.length > 0 && <div className="field-stack-badge">Under {inst.raidUnder.length}</div>}
           <div className="field-chip">
             <span>{def.name}</span>
           </div>

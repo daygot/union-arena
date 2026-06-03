@@ -203,6 +203,55 @@ describe("main phase: playing cards", () => {
     expect(apAfter).toBe(apBefore - 1);
   });
 
+  it("can keep an energy-line Raid target in energy or move the Raid stack to front line", () => {
+    let stay = fixture({
+      phase: "main",
+      p1: { energyLine: ["ENERGY", "SMALL"], hand: ["RAID"] },
+    });
+    const stayRaid = stay.players.p1.hand[0]!;
+    const stayBase = stay.players.p1.energyLine[1]!;
+    stay = must(applyIntent(stay, { type: "raid", seat: "p1", iid: stayRaid, targetIid: stayBase }));
+
+    expect(stay.players.p1.energyLine).toContain(stayRaid);
+    expect(stay.players.p1.energyLine).not.toContain(stayBase);
+    expect(stay.players.p1.frontLine).not.toContain(stayRaid);
+    expect(stay.instances[stayRaid]!.raidUnder).toEqual([stayBase]);
+
+    let move = fixture({
+      phase: "main",
+      p1: { energyLine: ["ENERGY", "SMALL"], hand: ["RAID"] },
+    });
+    const moveRaid = move.players.p1.hand[0]!;
+    const moveBase = move.players.p1.energyLine[1]!;
+    move = must(applyIntent(move, {
+      type: "raid",
+      seat: "p1",
+      iid: moveRaid,
+      targetIid: moveBase,
+      moveToFront: true,
+    }));
+
+    expect(move.players.p1.frontLine).toContain(moveRaid);
+    expect(move.players.p1.energyLine).not.toContain(moveRaid);
+    expect(move.players.p1.energyLine).not.toContain(moveBase);
+    expect(move.instances[moveRaid]!.raidUnder).toEqual([moveBase]);
+  });
+
+  it("rejects moving an energy-line Raid stack to a full front line", () => {
+    const g = fixture({
+      phase: "main",
+      p1: { energyLine: ["ENERGY", "SMALL"], frontLine: ["SMALL", "SMALL", "SMALL", "SMALL"], hand: ["RAID"] },
+    });
+    const r = applyIntent(g, {
+      type: "raid",
+      seat: "p1",
+      iid: g.players.p1.hand[0]!,
+      targetIid: g.players.p1.energyLine[1]!,
+      moveToFront: true,
+    });
+    expect(r.ok).toBe(false);
+  });
+
   it("rejects Raid without required energy or onto an existing Raid stack", () => {
     const noEnergy = fixture({ phase: "main", p1: { frontLine: ["SMALL"], hand: ["RAID"] } });
     expect(applyIntent(noEnergy, {

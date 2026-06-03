@@ -171,7 +171,7 @@ export type Intent =
   | { type: "extraDraw"; seat: Seat }
   | { type: "move"; seat: Seat; iid: string; to: "frontLine" | "energyLine" }
   | { type: "playCard"; seat: Seat; iid: string; to?: "frontLine" | "energyLine"; targetIid?: string }
-  | { type: "raid"; seat: Seat; iid: string; targetIid: string }
+  | { type: "raid"; seat: Seat; iid: string; targetIid: string; moveToFront?: boolean }
   | { type: "useEvent"; seat: Seat; iid: string }
   | { type: "activateAbility"; seat: Seat; iid: string; effectId: string }
   | { type: "declareAttack"; seat: Seat; attackerIid: string; targetIid?: string }
@@ -185,6 +185,8 @@ export type Intent =
       targetIid?: string;
       /** Card to play for green/purple color triggers (from hand/sideline). */
       playIid?: string;
+      /** For Raid triggers, move an energy-line base's Raid stack to the front line. */
+      moveToFront?: boolean;
     }
   | { type: "advancePhase"; seat: Seat }
   | { type: "endTurn"; seat: Seat };
