@@ -15,7 +15,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "scrape": "tsx src/cli.ts"
+    "scrape": "tsx src/cli.ts",
+    "selfplay": "tsx src/cli.ts --selfplay"
   },
   "dependencies": {
     "@union-arena/core": "workspace:*",

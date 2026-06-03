@@ -9,6 +9,7 @@ import { listTitles, scrapeTitle } from "./scraper.js";
 import { CardSetSchema } from "./schema.js";
 import { taxonomyReport } from "./taxonomy.js";
 import { groupCardsByProduct, productFileName } from "./normalize.js";
+import { formatSelfPlayFailure, runSelfPlay } from "./selfplay.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // packages/card-data/src -> data lives under packages/card-data/data (gitignored)
@@ -103,6 +104,27 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (process.argv.includes("--selfplay")) {
+    const games = Number(arg("--games") ?? "20");
+    const steps = Number(arg("--steps") ?? "200");
+    const seed = Number(arg("--seed") ?? "1");
+    const productCode = arg("--product");
+    for (let i = 0; i < games; i++) {
+      const result = runSelfPlay({
+        setsDir: OUT_DIR,
+        seed: seed + i,
+        maxSteps: steps,
+        ...(productCode ? { productCode } : {}),
+      });
+      if (!result.ok) {
+        console.error(formatSelfPlayFailure(result));
+        process.exit(1);
+      }
+      console.log(`SELFPLAY\tok\tseed=${result.seed}\tproduct=${result.productCode}\tsteps=${result.steps}`);
+    }
+    return;
+  }
+
   const title = process.argv[2];
   if (!title || title.startsWith("--")) {
     console.error('Usage: scrape "<TITLE>" [--limit N] [--images]');
@@ -110,6 +132,7 @@ async function main(): Promise<void> {
     console.error("       scrape --coverage");
     console.error("       scrape --audit");
     console.error("       scrape --taxonomy");
+    console.error("       scrape --selfplay [--games N] [--steps N] [--seed N] [--product UE19BT/SMD]");
     process.exit(1);
   }
   const limitStr = arg("--limit");

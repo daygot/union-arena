@@ -12,8 +12,8 @@ export { coverageReport } from "./coverage.js";
 export type { CoverageReport, CoverageSetSummary } from "./coverage.js";
 export { categoryLabel, taxonomyReport } from "./taxonomy.js";
 export type { TaxonomyBucket, TaxonomyExample, TaxonomyReport, TaxonomySignature } from "./taxonomy.js";
-export { formatSelfPlayFailure, validateSelfPlayInvariants } from "./selfplay.js";
-export type { SelfPlayFailure, SelfPlayStep } from "./selfplay.js";
+export { formatSelfPlayFailure, runSelfPlay, validateSelfPlayInvariants } from "./selfplay.js";
+export type { SelfPlayFailure, SelfPlayOk, SelfPlayOptions, SelfPlayResult, SelfPlayStep } from "./selfplay.js";
 export {
   canonicalPlayableCards,
   groupCardsByProduct,

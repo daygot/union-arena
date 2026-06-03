@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { CardDef, GameState } from "@union-arena/core";
-import { validateSelfPlayInvariants } from "./selfplay.js";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { runSelfPlay, validateSelfPlayInvariants } from "./selfplay.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SETS_DIR = join(__dirname, "..", "data", "sets");
 
 function def(id: string): CardDef {
   return {
@@ -104,3 +109,19 @@ describe("validateSelfPlayInvariants", () => {
   });
 });
 
+describe("runSelfPlay", () => {
+  it("plays a short deterministic game against the real SAKAMOTO DAYS corpus", () => {
+    const result = runSelfPlay({
+      setsDir: SETS_DIR,
+      productCode: "UE19BT/SMD",
+      seed: 20260602,
+      maxSteps: 40,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.productCode).toBe("UE19BT/SMD");
+      expect(result.transcript.length).toBeGreaterThan(2);
+    }
+  });
+});

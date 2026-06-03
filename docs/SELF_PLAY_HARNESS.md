@@ -27,22 +27,29 @@ The reducer is the authoritative rules engine. A headless harness is fast, deter
 
 Browser automation should come later, after this exists, to catch UI-only problems like missing buttons and bad disabled states.
 
-## Current Partial Implementation
+## Current Implementation
 
 `packages/card-data/src/selfplay.ts` currently contains:
 
 - `SelfPlayStep`
 - `SelfPlayFailure`
+- `SelfPlayResult`
 - `validateSelfPlayInvariants(state)`
 - `formatSelfPlayFailure(failure)`
+- corpus/deck generation helpers
+- legal-ish candidate intent generation
+- `runSelfPlay(options)`
+
+There is also:
+
+- `packages/card-data/src/selfplay.test.ts`, including a short deterministic SAKAMOTO DAYS run.
+- `pnpm --filter @union-arena/card-data selfplay -- --games 200 --steps 300 --seed 1234`
 
 Next implementation step:
 
-1. Add corpus/deck helpers.
-2. Add a legal-ish intent generator.
-3. Add `runSelfPlay(options)`.
-4. Add `selfplay.test.ts` with a few deterministic short games.
-5. Add `pnpm --filter @union-arena/card-data selfplay --games 200 --steps 300 --seed 1234`.
+1. Improve the bot's target choices for card-specific effects that currently rely on first-target fallbacks.
+2. Run longer cross-product hunts and turn any failure transcript into a regression test.
+3. Add a browser/Playwright layer that uses similar high-level decisions to catch UI-only bugs.
 
 ## Intent Generator Sketch
 
@@ -71,4 +78,3 @@ transcript:
 2 p2 {"type":"mulligan","seat":"p2","keep":true}
 ...
 ```
-
