@@ -197,6 +197,9 @@ function resolveColor(state: GameState, input: TriggerInput): ApplyResult {
       if (pdef.type !== "character" || pdef.apCost > COLOR_PLAY_MAX_AP) {
         return err(`green color trigger can only play a character with AP cost <= ${COLOR_PLAY_MAX_AP}.`);
       }
+      if (state.players[seat].frontLine.length >= 4) {
+        return err("Front line is full.");
+      }
       let s = sourceToSideline(state, seat, iid);
       s = withPlayer(s, seat, (p) => ({
         ...p,
@@ -216,6 +219,9 @@ function resolveColor(state: GameState, input: TriggerInput): ApplyResult {
       const pdef = getDef(state, play);
       if (pdef.type !== "character" || pdef.apCost > COLOR_PLAY_MAX_AP) {
         return err(`purple color trigger can only play a character with AP cost <= ${COLOR_PLAY_MAX_AP}.`);
+      }
+      if (state.players[seat].frontLine.length >= 4) {
+        return err("Front line is full.");
       }
       let s = sourceToSideline(state, seat, iid);
       s = withPlayer(s, seat, (p) => ({

@@ -221,6 +221,23 @@ describe("color trigger", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("green: rejects playing to a full front line", () => {
+    const g = bare();
+    const card = inst(g, "p1", "CHEAP");
+    g.players.p1.hand = [card];
+    g.players.p1.frontLine = [
+      inst(g, "p1", "FILLER"),
+      inst(g, "p1", "FILLER"),
+      inst(g, "p1", "FILLER"),
+      inst(g, "p1", "FILLER"),
+    ];
+    const src = inst(g, "p1", "GREEN");
+
+    const r = resolveTriggerEffect(g, "color" as TriggerType, { seat: "p1", iid: src, activate: true, playIid: card });
+
+    expect(r.ok).toBe(false);
+  });
+
   it("purple: plays a <=2 AP character from sideline to front line, active", () => {
     const g = bare();
     const card = inst(g, "p1", "CHEAP");
@@ -232,6 +249,23 @@ describe("color trigger", () => {
       expect(r.state.players.p1.frontLine).toContain(card);
       expect(r.state.players.p1.sideline).not.toContain(card);
     }
+  });
+
+  it("purple: rejects playing to a full front line", () => {
+    const g = bare();
+    const card = inst(g, "p1", "CHEAP");
+    g.players.p1.sideline = [card];
+    g.players.p1.frontLine = [
+      inst(g, "p1", "FILLER"),
+      inst(g, "p1", "FILLER"),
+      inst(g, "p1", "FILLER"),
+      inst(g, "p1", "FILLER"),
+    ];
+    const src = inst(g, "p1", "PURPLE");
+
+    const r = resolveTriggerEffect(g, "color" as TriggerType, { seat: "p1", iid: src, activate: true, playIid: card });
+
+    expect(r.ok).toBe(false);
   });
 });
 
